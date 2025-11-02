@@ -7,7 +7,7 @@ from app.bas_calculator import BASCalculator
 app = FastAPI(title="Smart Invoice Inbox + BAS Estimator")
 
 ocr_service = OCRService()
-parser_service = InvoiceParser(model="gpt-4")
+parser_service = InvoiceParser(model="mistral")
 validator_service = InvoiceValidator()
 bas_calculator = BASCalculator()
 
@@ -18,3 +18,12 @@ async def process_invoice(file: UploadFile):
     validated_data = validator_service.validate_fields(parsed_data)
     bas_summary = bas_calculator.estimate_bas([validated_data])
     return {"invoice_data": validated_data, "bas_summary": bas_summary}
+
+from app.agent import create_agent
+
+@app.post("/run_agent/")
+def run_agent(request: dict):
+    query = request.get("query", "Summarize my invoices.")
+    agent = create_agent()
+    result = agent.invoke(query)
+    return {"response": result}

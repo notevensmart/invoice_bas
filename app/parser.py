@@ -1,19 +1,14 @@
-from openai import OpenAI
+from langchain_ollama import OllamaLLM
 
 class InvoiceParser:
-    def __init__(self, model: str = "gpt-4-turbo"):
-        self.client = OpenAI()
-        self.model = model
+    def __init__(self, model: str = "mistral"):
+        self.llm = OllamaLLM(model=model)
 
     def parse_invoice(self, text: str) -> dict:
-        prompt = f"Extract supplier name, ABN, date, total, and GST from this invoice text:\n{text}\nReturn JSON."
-        response = self.client.chat.completions.create(
-            model=self.model,
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.2
+        prompt = (
+            "Extract the supplier name, ABN, date, total, and GST from the following text.\n"
+            "Return a valid JSON object.\n\n"
+            f"Invoice:\n{text}"
         )
-        content = response.choices[0].message.content
-        try:
-            return eval(content) if isinstance(content, str) else content
-        except Exception:
-            return {"raw_output": content}
+        response = self.llm.invoke(prompt)
+        return {"raw_response": response}
