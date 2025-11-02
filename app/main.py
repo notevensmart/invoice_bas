@@ -3,6 +3,7 @@ from app.ocr import OCRService
 from app.parser import InvoiceParser
 from app.validator import InvoiceValidator
 from app.bas_calculator import BASCalculator
+from app.agent import create_agent
 
 app = FastAPI(title="Smart Invoice Inbox + BAS Estimator")
 
@@ -19,7 +20,7 @@ async def process_invoice(file: UploadFile):
     bas_summary = bas_calculator.estimate_bas([validated_data])
     return {"invoice_data": validated_data, "bas_summary": bas_summary}
 
-from app.agent import create_agent
+
 
 @app.post("/run_agent/")
 def run_agent(request: dict):
