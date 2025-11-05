@@ -12,7 +12,5 @@ pdf2image
 dotenv
 PyPDF2
 langchain-community
-re
-json
 
           # optional: to build a quick chat UI
