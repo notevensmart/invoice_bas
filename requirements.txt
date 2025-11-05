@@ -12,5 +12,5 @@ pdf2image
 dotenv
 PyPDF2
 langchain-community
-
+python-multipart
           # optional: to build a quick chat UI
