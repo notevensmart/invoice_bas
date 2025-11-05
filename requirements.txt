@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+requests
+streamlit
+python-dotenv
+langchain
+langgraph
+langchain-groq 
+pydantic
+pytesseract
+          # optional: to build a quick chat UI
