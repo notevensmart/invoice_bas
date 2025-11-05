@@ -1,7 +1,7 @@
 import streamlit as st
 import requests
 
-API_URL = "invoicebas-production.up.railway.app/chat"
+API_URL = "https://invoicebas-production.up.railway.app/chat"
 
 st.set_page_config(page_title="Smart BAS Assistant", page_icon="🧾")
 
