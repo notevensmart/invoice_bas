@@ -8,7 +8,7 @@ from app.bas_calculator import BASCalculator
 
 # Instantiate once
 _ocr = OCRService()
-_parser = InvoiceParser(model="mistral")
+_parser = InvoiceParser()
 _validator = InvoiceValidator()
 _bas = BASCalculator()
 
