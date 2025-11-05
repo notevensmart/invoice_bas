@@ -16,7 +16,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-@app.post("/chat/")
+@app.post("/chat")
 async def chat_with_bas_agent(
     message: str = Form(...),
     file: UploadFile = File(None)
