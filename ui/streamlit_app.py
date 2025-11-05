@@ -1,7 +1,7 @@
 import streamlit as st
 import requests
 
-API_URL = "http://127.0.0.1:8000/ask"
+API_URL = "https://invoice-bas-1.vercel.app/ask"
 
 st.set_page_config(page_title="Smart BAS Assistant", page_icon="🧾")
 
