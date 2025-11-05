@@ -3,6 +3,7 @@ import asyncio
 from fastapi.middleware.cors import CORSMiddleware
 from app.ocr import OCRService
 from app.agent import ChatBASAgent
+from fastapi.responses import JSONResponse
 
 app = FastAPI(title="Smart BAS Conversational Agent")
 ocr_service = OCRService()
@@ -18,12 +19,23 @@ app.add_middleware(
 @app.post("/chat/")
 async def chat_with_bas_agent(
     message: str = Form(...),
-    file: UploadFile = File(None)):
+    file: UploadFile = File(None)
+):
     """Chat with the BAS agent; optional invoice file upload."""
-    text = message
-    if file:
-        extracted = await asyncio.to_thread(ocr_service.extract_text, file.file)
-        text += "\n\n" + extracted
-    result = chat_agent.run(text)
-    return result
+    try:
+        text = message
+        if file:
+            extracted = await asyncio.to_thread(ocr_service.extract_text, file.file)
+            text += "\n\n" + extracted
+
+        result = chat_agent.run(text)
+
+        # ✅ Always return valid JSON
+        return JSONResponse(content=result, status_code=200)
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+
 handler = app
