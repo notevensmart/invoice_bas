@@ -22,20 +22,13 @@ async def chat_with_bas_agent(
     file: UploadFile = File(None)
 ):
     """Chat with the BAS agent; optional invoice file upload."""
-    try:
-        text = message
-        if file:
-            extracted = await asyncio.to_thread(ocr_service.extract_text, file.file)
-            text += "\n\n" + extracted
+    text = message
+    if file:
+        content = await file.read()  
+        extracted = await asyncio.to_thread(ocr_service.extract_text, content)
+        text += "\n\n" + extracted
 
-        result = chat_agent.run(text)
-
-        # ✅ Always return valid JSON
-        return JSONResponse(content=result, status_code=200)
-
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return JSONResponse(content={"error": str(e)}, status_code=500)
+    result = chat_agent.run(text)
+    return JSONResponse(content=result, status_code=200)
 
 handler = app
