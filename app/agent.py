@@ -82,7 +82,7 @@ class ChatBASAgent:
         except Exception as e:
             return f"Tool '{name}' failed: {e}"
         
-    def _safe_markdown(text: str) -> str:
+    def _safe_markdown(self, text: str) -> str:
         """Prevent Markdown/MathJax from breaking currency text."""
         # Escape dollar signs
         text = text.replace("$", "\\$")
