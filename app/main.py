@@ -51,7 +51,7 @@ async def chat_with_bas_agent(
             content={"error": str(e)},
             status_code=500,
         )
-@app.post("/process-batch")
+@ app.post("/process-batch")
 async def process_batch(
     files: List[UploadFile] = File(...),
 ):
@@ -75,8 +75,6 @@ async def process_batch(
         total_collected = total_paid = 0.0
         for r in results:
             out = r.get("response", "")
-            # crude parse: you could adapt your calculate_bas logic instead
-            # safer option: modify ChatBASAgent to return structured JSON too
             try:
                 if "GST Collected:" in out and "GST Paid:" in out:
                     lines = out.splitlines()
@@ -89,49 +87,67 @@ async def process_batch(
                 pass
 
         net_liability = total_collected - total_paid
+        num_invoices = len(results)
 
         aggregate = {
             "gst_collected": round(total_collected, 2),
             "gst_paid": round(total_paid, 2),
             "net_liability": round(net_liability, 2),
+            "invoice_count": num_invoices,
         }
 
-
-
+        # -------------------------
+        # Build user-friendly summary
+        # -------------------------
+        position_text = (
+            "You'll likely owe GST this period."
+            if net_liability > 0
+            else "You're due a refund this period."
+            if net_liability < 0
+            else "Your GST collected and paid are balanced this period."
+        )
 
         summary_text = (
             f"📦 **Batch Summary**\n"
+            f"- Invoices Processed: {num_invoices}\n"
             f"- GST Collected: ${aggregate['gst_collected']:.2f}\n"
             f"- GST Paid: ${aggregate['gst_paid']:.2f}\n"
             f"- Net BAS Position: ${aggregate['net_liability']:.2f}\n\n"
-            
-)
+            f"💬 {position_text}\n\n"
+            "Would you like me to compare suppliers or forecast the next BAS?"
+        )
+
+        # -------------------------
+        # Feed summary into memory
+        # -------------------------
         memory_prompt = (
             f"Remember this batch BAS summary for context:\n\n"
             f"{summary_text}\n\n"
             "This represents the most recent batch of invoices processed."
         )
 
-        # Run in 'chat' mode so it uses conversational memory
         agent_result = chat_agent.run(memory_prompt, mode="chat")
 
-        # Optionally append manually too (for explicit logging)
-        chat_agent.history.append(
-            ("system", f"Stored batch summary: {summary_text}")
-        )
+        # Optional explicit logging
+        chat_agent.history.append(("system", f"Stored batch summary: {summary_text}"))
 
+        # -------------------------
+        # Return consistent response
+        # -------------------------
         return JSONResponse(
             content={
-                "response": summary_text,   # 👈 keeps frontend behavior consistent
+                "response": summary_text,
                 "aggregate_summary": aggregate,
-                "batch_results": results
+                "batch_results": results,
             },
-            status_code=200
+            status_code=200,
         )
+
     except Exception as e:
         import traceback
         traceback.print_exc()
         return JSONResponse(content={"error": str(e)}, status_code=500)
+
 
 # Required for Vercel / Railway handlers
 handler = app
