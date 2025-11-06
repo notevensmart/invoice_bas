@@ -210,15 +210,15 @@ class ChatBASAgent:
         # --- Reflective reasoning: derive cashflow context
         if liability < 0:
             context_line = (
-                f"You've paid **${gst_paid:.2f}** in GST on purchases but only collected **${gst_collected:.2f}**. "
-                f"That means you're due a **refund of ${abs(liability):.2f}** this period. "
+                f"You've paid ${gst_paid:,.2f} in GST on purchases but only collected ${gst_collected:,.2f}. "
+                f"That means you're due a refund of ${abs(liability):,.2f} this period. "
                 "It suggests your business expenses have outweighed your sales this cycle — something worth keeping an eye on."
             )
 
         elif liability > 0:
             context_line = (
-                f"You've collected **${gst_collected:.2f}** in GST from sales but only paid **${gst_paid:.2f}** on purchases. "
-                f"This means you'll likely owe around **${liability:.2f}** in your next BAS. "
+                f"You've collected ${gst_collected:,.2f} in GST from sales but only paid ${gst_paid:,.2f} on purchases. "
+                f"This means you'll likely owe around ${liability:,.2f} in your next BAS. "
                 "It's a good idea to set that amount aside now to avoid a surprise at lodgement time."
             )
 
@@ -226,6 +226,7 @@ class ChatBASAgent:
             context_line = (
                 "Your GST collected and paid are balanced, meaning your business activity this period was neutral."
             )
+        context_line = re.sub(r"([$]\d)", r"\\\1", context_line)
 
         # --- Construct output (concise vs detailed)
         if getattr(self, "concise", True):
