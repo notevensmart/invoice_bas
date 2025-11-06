@@ -95,12 +95,22 @@ async def process_batch(
             "gst_paid": round(total_paid, 2),
             "net_liability": round(net_liability, 2),
         }
+        response_text = (
+            f"📦 **Batch Summary**\n"
+            f"- GST Collected: ${aggregate['gst_collected']:.2f}\n"
+            f"- GST Paid: ${aggregate['gst_paid']:.2f}\n"
+            f"- Net BAS Position: ${aggregate['net_liability']:.2f}\n\n"
+            "Would you like me to compare suppliers or forecast the next BAS?"
+)
 
         return JSONResponse(
-            content={"batch_results": results, "aggregate_summary": aggregate},
+            content={
+                "response": response_text,   # 👈 keeps frontend behavior consistent
+                "aggregate_summary": aggregate,
+                "batch_results": results
+            },
             status_code=200
         )
-
     except Exception as e:
         import traceback
         traceback.print_exc()
