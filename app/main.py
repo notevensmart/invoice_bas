@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.ocr import OCRService
 from app.agent import ChatBASAgent
 from fastapi.responses import JSONResponse
+from typing import List
 
 app = FastAPI(title="Smart BAS Conversational Agent")
 ocr_service = OCRService()
@@ -50,7 +51,60 @@ async def chat_with_bas_agent(
             content={"error": str(e)},
             status_code=500,
         )
+@app.post("/process-batch")
+async def process_batch(
+    files: List[UploadFile] = File(...),
+):
+    """
+    Accept multiple invoices, process them concurrently, and return
+    both individual results and an aggregated BAS summary.
+    """
+    try:
+        async def handle_file(file: UploadFile):
+            content = await file.read()
+            extracted = await asyncio.to_thread(ocr_service.extract_text, content)
+            result = chat_agent.run(extracted, mode="invoice")
+            return result
 
+        # Run all OCR + agent calls concurrently
+        results = await asyncio.gather(*(handle_file(f) for f in files))
+
+        # -------------------------
+        # Aggregate BAS summaries
+        # -------------------------
+        total_collected = total_paid = 0.0
+        for r in results:
+            out = r.get("response", "")
+            # crude parse: you could adapt your calculate_bas logic instead
+            # safer option: modify ChatBASAgent to return structured JSON too
+            try:
+                if "GST Collected:" in out and "GST Paid:" in out:
+                    lines = out.splitlines()
+                    for line in lines:
+                        if "GST Collected" in line:
+                            total_collected += float(line.split("$")[-1].replace(",", "").strip())
+                        if "GST Paid" in line:
+                            total_paid += float(line.split("$")[-1].replace(",", "").strip())
+            except Exception:
+                pass
+
+        net_liability = total_collected - total_paid
+
+        aggregate = {
+            "gst_collected": round(total_collected, 2),
+            "gst_paid": round(total_paid, 2),
+            "net_liability": round(net_liability, 2),
+        }
+
+        return JSONResponse(
+            content={"batch_results": results, "aggregate_summary": aggregate},
+            status_code=200
+        )
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JSONResponse(content={"error": str(e)}, status_code=500)
 
 # Required for Vercel / Railway handlers
 handler = app
