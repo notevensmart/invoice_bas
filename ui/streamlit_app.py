@@ -64,16 +64,13 @@ if message:
     # ------------------------------
     if uploaded_files:
         if mode == "Single Invoice":
-            # Single invoice upload
             files_payload = {"file": (uploaded_files.name, uploaded_files.read(), uploaded_files.type)}
             endpoint = API_URL_SINGLE
         else:
-            # Batch upload (multiple invoices)
             files_payload = [("files", (f.name, f.read(), f.type)) for f in uploaded_files]
             endpoint = API_URL_BATCH
     else:
-        # No files = chat only
-        endpoint = API_URL_SINGLE
+        endpoint = API_URL_SINGLE  # No upload → chat only
 
     # ------------------------------
     # Send request to backend
@@ -83,7 +80,6 @@ if message:
             response = requests.post(endpoint, data=data, files=files_payload)
             if response.status_code == 200:
                 data = response.json()
-                # Backend already formats response
                 bot_reply = data.get("response", "")
             else:
                 bot_reply = f"⚠️ Backend error ({response.status_code})"
@@ -91,19 +87,19 @@ if message:
             bot_reply = f"❌ Connection error: {e}"
 
     # ------------------------------
-    # Display & reset
+    # Display reply & cleanup
     # ------------------------------
     st.session_state["messages"].append({"role": "assistant", "content": bot_reply})
 
-    # Close and clear uploaded files
+    # Safely close and reset uploader (no direct session write)
     if uploaded_files:
         if isinstance(uploaded_files, list):
             for f in uploaded_files:
                 f.close()
-            st.session_state["batch_uploader"] = None
         else:
             uploaded_files.close()
-            st.session_state["single_uploader"] = None
+
+        # 🚀 Trigger UI refresh to clear uploader
         st.experimental_rerun()
 
     # Refresh chat UI
