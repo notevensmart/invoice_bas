@@ -14,12 +14,14 @@ st.set_page_config(page_title="Smart BAS Assistant", page_icon="🧾", layout="c
 
 if "messages" not in st.session_state:
     st.session_state["messages"] = []
+if "clear_upload" not in st.session_state:
+    st.session_state["clear_upload"] = False
 
 st.title("🧾 Smart BAS Assistant")
 st.caption("Upload invoices and chat about your BAS or GST.")
 
 # ------------------------------
-# Chat History Container
+# Chat History
 # ------------------------------
 chat_box = st.container(height=400)
 for msg in st.session_state["messages"]:
@@ -46,22 +48,23 @@ else:
         accept_multiple_files=True,
     )
 
+# 🔄 Reset uploader if flagged on previous run
+if st.session_state.get("clear_upload"):
+    st.session_state["clear_upload"] = False
+    uploaded_files = None
+
 # ------------------------------
-# Chat Input Field
+# Chat Input
 # ------------------------------
 message = st.chat_input("Ask a question (e.g., 'How much GST did I pay?')")
 
 if message:
-    # Save user message in chat history
+    # Append user message
     st.session_state["messages"].append({"role": "user", "content": message})
 
-    # Build data payload
+    # Decide endpoint
     data = {"message": message}
     files_payload = None
-
-    # ------------------------------
-    # Decide which endpoint to call
-    # ------------------------------
     if uploaded_files:
         if mode == "Single Invoice":
             files_payload = {"file": (uploaded_files.name, uploaded_files.read(), uploaded_files.type)}
@@ -70,7 +73,7 @@ if message:
             files_payload = [("files", (f.name, f.read(), f.type)) for f in uploaded_files]
             endpoint = API_URL_BATCH
     else:
-        endpoint = API_URL_SINGLE  # No upload → chat only
+        endpoint = API_URL_SINGLE
 
     # ------------------------------
     # Send request to backend
@@ -87,19 +90,20 @@ if message:
             bot_reply = f"❌ Connection error: {e}"
 
     # ------------------------------
-    # Display reply & cleanup
+    # Show assistant reply immediately
     # ------------------------------
-     # Display reply & cleanup
     st.session_state["messages"].append({"role": "assistant", "content": bot_reply})
 
-    # Safely close and reset uploader
+    # ------------------------------
+    # Cleanup uploader AFTER showing reply
+    # ------------------------------
     if uploaded_files:
+        # Close file handles
         if isinstance(uploaded_files, list):
             for f in uploaded_files:
                 f.close()
         else:
             uploaded_files.close()
 
-        # 🚀 Trigger UI refresh to clear uploader
-        st.rerun()
-
+        # Mark to clear on next rerun (no immediate rerun)
+        st.session_state["clear_upload"] = True
