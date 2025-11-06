@@ -81,6 +81,17 @@ class ChatBASAgent:
                 return f"Unknown tool '{name}'."
         except Exception as e:
             return f"Tool '{name}' failed: {e}"
+        
+    def _safe_markdown(text: str) -> str:
+        """Prevent Markdown/MathJax from breaking currency text."""
+        # Escape dollar signs
+        text = text.replace("$", "\\$")
+        # Ensure space after currency when needed
+        text = re.sub(r"(\\\$)(\d)", r"\1 \2", text)
+        # Normalise multiple spaces
+        text = re.sub(r"\s{2,}", " ", text)
+        return text
+
     def _format_response(self, tool_name: str, tool_output, explanation: str):
         def clean_val(v):
             if v in [None, "N/A", "", "Unknown"]:
@@ -119,9 +130,9 @@ class ChatBASAgent:
             liability = tool_output.get("net_liability", 0)
             if isinstance(liability, (int, float)):
                 if liability > 0:
-                    formatted += f"💬 You’ll owe approximately ${liability:.2f} in GST this period.\n\n"
+                    formatted += f"💬 You'll owe approximately ${liability:.2f} in GST this period.\n\n"
                 elif liability < 0:
-                    formatted += f"💬 You’re due a GST refund of ${abs(liability):.2f}.\n\n"
+                    formatted += f"💬 You're due a GST refund of ${abs(liability):.2f}.\n\n"
                 else:
                     formatted += "💬 Your GST collected and paid are balanced this period.\n\n"
 
@@ -226,7 +237,7 @@ class ChatBASAgent:
             context_line = (
                 "Your GST collected and paid are balanced, meaning your business activity this period was neutral."
             )
-        context_line = re.sub(r"([$]\d)", r"\\\1", context_line)
+        context_line = self._safe_markdown(context_line)
 
         # --- Construct output (concise vs detailed)
         if getattr(self, "concise", True):
@@ -260,6 +271,7 @@ class ChatBASAgent:
         )
 
         formatted = self._clean_final_output(formatted)
+        formatted = self._safe_markdown(formatted)
         return {"explanation": formatted}
 
    
