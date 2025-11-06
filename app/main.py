@@ -95,17 +95,34 @@ async def process_batch(
             "gst_paid": round(total_paid, 2),
             "net_liability": round(net_liability, 2),
         }
-        response_text = (
+
+
+
+
+        summary_text = (
             f"📦 **Batch Summary**\n"
             f"- GST Collected: ${aggregate['gst_collected']:.2f}\n"
             f"- GST Paid: ${aggregate['gst_paid']:.2f}\n"
             f"- Net BAS Position: ${aggregate['net_liability']:.2f}\n\n"
-            "Would you like me to compare suppliers or forecast the next BAS?"
+            
 )
+        memory_prompt = (
+            f"Remember this batch BAS summary for context:\n\n"
+            f"{summary_text}\n\n"
+            "This represents the most recent batch of invoices processed."
+        )
+
+        # Run in 'chat' mode so it uses conversational memory
+        agent_result = chat_agent.run(memory_prompt, mode="chat")
+
+        # Optionally append manually too (for explicit logging)
+        chat_agent.history.append(
+            ("system", f"Stored batch summary: {summary_text}")
+        )
 
         return JSONResponse(
             content={
-                "response": response_text,   # 👈 keeps frontend behavior consistent
+                "response": summary_text,   # 👈 keeps frontend behavior consistent
                 "aggregate_summary": aggregate,
                 "batch_results": results
             },
