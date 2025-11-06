@@ -21,14 +21,36 @@ async def chat_with_bas_agent(
     message: str = Form(...),
     file: UploadFile = File(None)
 ):
-    """Chat with the BAS agent; optional invoice file upload."""
-    text = message
-    if file:
-        content = await file.read()  
-        extracted = await asyncio.to_thread(ocr_service.extract_text, content)
-        text += "\n\n" + extracted
+    """
+    Chat with the BAS agent.
+    - If a file is uploaded, runs invoice reasoning (graph mode).
+    - Otherwise, handles conversational Q&A (chat mode).
+    """
+    try:
+        mode = "chat"   # default: conversational
+        text = message.strip()
 
-    result = chat_agent.run(text)
-    return JSONResponse(content=result, status_code=200)
+        # --- Invoice reasoning if file uploaded ---
+        if file:
+            content = await file.read()
+            extracted = await asyncio.to_thread(ocr_service.extract_text, content)
+            text += f"\n\n{extracted.strip()}"
+            mode = "invoice"
 
+        # --- Run the agent with correct mode ---
+        result = chat_agent.run(text, mode=mode)
+
+        # --- Wrap for response ---
+        return JSONResponse(content=result, status_code=200)
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JSONResponse(
+            content={"error": str(e)},
+            status_code=500,
+        )
+
+
+# Required for Vercel / Railway handlers
 handler = app

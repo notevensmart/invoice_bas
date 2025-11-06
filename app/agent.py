@@ -191,76 +191,75 @@ class ChatBASAgent:
         bas_summary = calculate_bas([invoice_data])
         return {"output": bas_summary}
 
-
     def _explain_node(self, state: AgentState):
+        """
+        Intelligent explain node:
+        - Summarizes BAS intelligently (concise or detailed)
+        - Reflects on financial meaning
+        - Avoids redundant repetition across turns
+        """
         parsed = state.get("parsed", {})
         validated = state.get("validated", {})
         bas_summary = state.get("output", {})
 
-        last_user_message = self.history[-1][0] if self.history else ""
-        intent_prompt = (
-            "You are a classification helper for a BAS assistant.\n"
-            "Return a JSON list of one or more: ['gst', 'abn', 'bas', 'summary'] "
-            "representing what the user is asking for.\n"
-            f"User message: {last_user_message}"
-        )
-        intent_guess = self.llm.invoke(intent_prompt)
-        intent_text = intent_guess if isinstance(intent_guess, str) else intent_guess.content
-
-        try:
-            requested_keys = json.loads(intent_text)
-            if not isinstance(requested_keys, list):
-                requested_keys = [requested_keys]
-        except Exception:
-            requested_keys = ["summary"]
-
-        requested_keys = [k.lower() for k in requested_keys]
+        supplier = parsed.get("supplier", "this supplier")
         liability = float(bas_summary.get("net_liability", 0) or 0)
+        gst_paid = float(bas_summary.get("gst_paid", 0) or 0)
+        gst_collected = float(bas_summary.get("gst_collected", 0) or 0)
 
-        # --- Concise friendly mode ---
+        # --- Reflective reasoning: derive cashflow context
+        if liability < 0:
+            context_line = (
+                f"You’ve paid more GST (${gst_paid:.2f}) than you collected (${gst_collected:.2f}), "
+                f"so a refund of ${abs(liability):.2f} is due. "
+                "That suggests your expenses are higher than your taxable sales."
+            )
+        elif liability > 0:
+            context_line = (
+                f"You’ve collected more GST (${gst_collected:.2f}) than you paid (${gst_paid:.2f}), "
+                f"so you’ll likely owe about ${liability:.2f} in your next BAS. "
+                "You might consider setting those funds aside to avoid surprises."
+            )
+        else:
+            context_line = (
+                "Your GST collected and paid are balanced, meaning your business activity this period was neutral."
+            )
+
+        # --- Construct output (concise vs detailed)
         if getattr(self, "concise", True):
-            if "gst" in requested_keys or "abn" in requested_keys:
-                if liability < 0:
-                    message = (
-                        f"You paid ${bas_summary.get('gst_paid', 0):.2f} GST on your "
-                        f"{parsed.get('supplier', 'supplier')} invoice, so you're due a refund of "
-                        f"${abs(liability):.2f} this period. "
-                        "Looks like you've paid more GST on purchases than you collected from customers. "
-                        "Would you like me to show how this affects your next BAS?"
-                    )
-                elif liability > 0:
-                    message = (
-                        f"You collected more GST than you paid — about ${liability:.2f} owing this period. "
-                        "That means you'll likely have a GST liability for your next BAS. "
-                        "Would you like me to estimate what that looks like across your invoices?"
-                    )
-                else:
-                    message = (
-                        "Your GST collected and paid are balanced this period. "
-                        "If you'd like, I can help you double-check your supplier invoices for any missed credits."
-                    )
-                return {"explanation": message}
-
-            # 🧾 Concise summary (when user says 'show summary' or 'bas')
             summary = (
-                f"**BAS Summary**\n"
-                f"- Supplier: {parsed.get('supplier')}\n"
-                f"- ABN: {parsed.get('abn')}\n"
-                f"- GST Collected: ${bas_summary.get('gst_collected', 0):.2f}\n"
-                f"- GST Paid: ${bas_summary.get('gst_paid', 0):.2f}\n"
-                f"- Net Liability / Refund: ${liability:.2f}\n"
+                f"**BAS Summary for {supplier}**\n"
+                f"- GST Collected: ${gst_collected:.2f}\n"
+                f"- GST Paid: ${gst_paid:.2f}\n"
+                f"- Net BAS Position: ${liability:.2f}\n\n"
+                f"{context_line}\n"
+                "Would you like a broader summary across suppliers or a quarterly BAS estimate?"
             )
             return {"explanation": summary}
 
-        # --- Detailed mode (for developer or user request) ---
+        # --- Detailed mode (adds validation + insights)
         formatted = (
-            self._format_response("parse_invoice", parsed, "") + "\n" +
-            self._format_response("validate_invoice", validated, "") + "\n" +
-            self._format_response("calculate_bas", bas_summary, "")
+            f"**Invoice Details**\n"
+            f"- Supplier: {supplier}\n"
+            f"- ABN: {parsed.get('abn', 'N/A')}\n"
+            f"- Date: {parsed.get('date', 'Unknown')}\n"
+            f"- Amount (ex GST): ${parsed.get('amount_ex_gst', 0)}\n"
+            f"- GST: ${parsed.get('gst', 0)}\n\n"
+            f"**Validation**\n"
+            f"- ABN valid: {validated.get('abn_valid', 'Unknown')}\n"
+            f"- All fields present: {validated.get('fields_ok', 'Unknown')}\n\n"
+            f"**BAS Summary**\n"
+            f"- GST Collected: ${gst_collected:.2f}\n"
+            f"- GST Paid: ${gst_paid:.2f}\n"
+            f"- Net Liability / Refund: ${liability:.2f}\n\n"
+            f"💬 **Interpretation:** {context_line}\n"
+            "If you’d like, I can estimate your quarterly BAS position or flag categories with rising costs."
         )
+
         formatted = self._clean_final_output(formatted)
         return {"explanation": formatted}
 
+   
     # ----- Build LangGraph -----
     def _build_graph(self):
         graph = StateGraph(AgentState)
@@ -277,134 +276,71 @@ class ChatBASAgent:
         return graph.compile(checkpointer=self.memory)
 
     # ----- Invoke the agent -----
-    def run(self, message: str):
+    def run(self, message: str, mode: str = "chat"):
         """
-        Hybrid reasoning loop with:
-        - Conversational memory (recalls recent turns)
-        - Dynamic verbosity (concise/detailed switch)
-        - Invoice reasoning graph
-        - Friendly chat fallback
+        Smarter hybrid reasoning loop with:
+        - Context-aware conversation memory
+        - Graph reasoning only when required (new invoice or structured data)
+        - Reflection-based improvement on final answer
         """
+        # Step 0: Recall prior context for continuity
+        recent_context = "\n".join(f"User: {u}\nAgent: {a}" for u, a in self.history[-3:])
+        last_report = getattr(self, "last_report", "")
 
-        # ---- Step 0 | Context memory ----
-        history_context = "\n".join(
-            f"User: {u}\nAgent: {a}" for u, a in self.history[-4:]
-        )
-        context_prompt = (
-            "You are a friendly, professional Australian BAS assistant.\n"
-            "Use the short history below for continuity; greet naturally if returning.\n\n"
-            f"History:\n{history_context}\n\nUser: {message}\nAgent:"
-        )
-
-        # ---- Step 1 | Intent classification ----
-        interpret_prompt = (
-            "Classify this message.\n"
-            "If it involves invoices, receipts, or GST/BAS → [INVOICE_MODE].\n"
-            "If it’s casual or unrelated → [CHAT_MODE].\n"
-            "Respond with one tag only.\n\n"
-            f"User: {message}\nAgent:"
-        )
-        intent_resp = self.llm.invoke(interpret_prompt)
-        intent_text = intent_resp if isinstance(intent_resp, str) else intent_resp.content
-
-        # ---- Step 2 | Invoice mode ----
-        if "[INVOICE_MODE]" in intent_text.upper():
-            print(f"🧩 Running structured BAS graph for message: {message}")
-
-            # --- Dynamic verbosity (unless forced) ---
-            if not getattr(self, "force_mode", False):
-                verbosity_prompt = (
-                    "Decide detail level for a BAS assistant.\n"
-                    "If the user wants a quick figure (GST paid/refund/ABN) → [CONCISE].\n"
-                    "If they request a full BAS summary/report → [DETAILED].\n"
-                    "Respond with one tag only.\n\n"
-                    f"User: {message}\nAssistant:"
+        # --- Pure chat mode if no new invoice
+        if mode == "chat":
+            context = ""
+            if last_report:
+                context = (
+                    f"\nEarlier BAS summary:\n{last_report}\n"
+                    "If the user asks about 'it' or 'that', assume they mean this summary."
                 )
-                verbosity_resp = self.llm.invoke(verbosity_prompt)
-                verbosity_text = (
-                    verbosity_resp if isinstance(verbosity_resp, str)
-                    else verbosity_resp.content
-                )
-                if "[CONCISE]" in verbosity_text.upper():
-                    self.concise = True
-                elif "[DETAILED]" in verbosity_text.upper():
-                    self.concise = False
 
-            print(f"🧠 Agent verbosity set to: {'Concise' if self.concise else 'Detailed'}")
-
-            # --- Detail detection (gst/abn/bas/summary) ---
-            detail_prompt = (
-                "Identify which details the user wants from the invoice.\n"
-                "Possible options: gst, abn, bas, summary.\n"
-                "Return a JSON list like ['gst','bas'].\n\n"
-                f"User: {message}"
+            chat_prompt = (
+                "You are a conversational Australian BAS and bookkeeping assistant.\n"
+                "Be concise, insightful, and friendly. Never regenerate the same BAS table.\n"
+                "If the user sounds confused or asks 'what does that mean', explain their last BAS summary in simple terms.\n"
+                "If they ask 'how am I tracking' or 'am I doing okay', provide financial insight based on trends.\n"
+                "If unclear, ask a clarifying question.\n\n"
+                f"Conversation so far:\n{recent_context}\n\nUser: {message}\nAgent:{context}"
             )
-            detail_resp = self.llm.invoke(detail_prompt)
-            detail_text = detail_resp if isinstance(detail_resp, str) else detail_resp.content
-            try:
-                requested_keys = json.loads(detail_text)
-                if not isinstance(requested_keys, list):
-                    requested_keys = [requested_keys]
-            except Exception:
-                requested_keys = ["summary"]
-            requested_keys = [k.lower() for k in requested_keys]
 
-            # --- Step 3 | Run reasoning graph (with context prompt) ---
-            initial_state = {"input": context_prompt}
-            result = self.graph.invoke(initial_state, config=config)
-            graph_output = result.get("explanation", "No explanation generated.")
-
-            # --- Step 4 | Adaptive output formatting ---
-            if getattr(self, "concise", True) and ("gst" in requested_keys or "abn" in requested_keys):
-                concise_prompt = (
-                    "Summarise this BAS report in 1-2 friendly sentences in plain Australian English.\n"
-                    "Focus only on GST paid/collected and refund/liability.\n"
-                    "No markdown or headings.\n\n"
-                    f"Report:\n{graph_output}"
-                )
-                concise_resp = self.llm.invoke(concise_prompt)
-                concise_text = concise_resp if isinstance(concise_resp, str) else concise_resp.content
-                final_output = concise_text.strip()
-            else:
-                detailed_prompt = (
-                    "Format this BAS report neatly in Markdown with clear sections.\n"
-                    "Include Supplier, ABN, GST Collected, GST Paid, Net Liability / Refund.\n"
-                    "End with one short friendly sentence offering further help.\n\n"
-                    f"Report:\n{graph_output}"
-                )
-                detailed_resp = self.llm.invoke(detailed_prompt)
-                detailed_text = detailed_resp if isinstance(detailed_resp, str) else detailed_resp.content
-                final_output = f"👋 Hi there!\n\n{detailed_text.strip()}"
-
-            # ---- Step 5 | Update short-term memory ----
-            self.history.append((message, final_output))
-            if len(self.history) > 8:
-                self.history = self.history[-8:]
-
+            reply = self.llm.invoke(chat_prompt)
+            reply_text = reply if isinstance(reply, str) else reply.content
+            self.history.append((message, reply_text))
             return {
-                "response": final_output,
-                "mode": "invoice",
+                "response": reply_text.strip(),
+                "mode": "chat",
                 "thread_id": self.thread_id,
             }
 
-        # ---- Step 3 | Chat fallback ----
-        print(f"💬 Chat mode triggered for message: {message}")
-        chat_prompt = (
-            "You are a friendly Australian BAS and bookkeeping assistant.\n"
-            "Use the short history below for continuity.\n\n"
-            f"History:\n{history_context}\n\nUser: {message}\nAgent:"
-        )
-        reply = self.llm.invoke(chat_prompt)
-        reply_text = reply if isinstance(reply, str) else reply.content
+        # --- Invoice (structured) mode
+        print(f"🧾 Running intelligent BAS reasoning for message: {message}")
+        initial_state = {"input": message}
+        result = self.graph.invoke(initial_state, config=config)
+        graph_output = result.get("explanation", "")
 
-        # Save to memory
-        self.history.append((message, reply_text))
+        # Save last report for chat reference
+        self.last_report = graph_output
+
+        # Reflective post-processing (improve phrasing + check relevance)
+        reflection_prompt = (
+            "Review the following BAS summary for clarity and usefulness to a café owner. "
+            "Ensure it’s helpful and easy to understand, with plain Australian English. "
+            "If improvements are needed, rewrite it. Otherwise, return it unchanged.\n\n"
+            f"{graph_output}"
+        )
+        reflection_resp = self.llm.invoke(reflection_prompt)
+        reflection_text = reflection_resp if isinstance(reflection_resp, str) else reflection_resp.content
+
+        final_output = reflection_text.strip()
+        self.history.append((message, final_output))
         if len(self.history) > 8:
             self.history = self.history[-8:]
 
         return {
-            "response": reply_text,
-            "mode": "chat",
+            "response": final_output,
+            "mode": "invoice",
             "thread_id": self.thread_id,
         }
 
