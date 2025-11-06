@@ -8,8 +8,6 @@ st.set_page_config(page_title="Smart BAS Assistant", page_icon="🧾", layout="c
 
 if "messages" not in st.session_state:
     st.session_state["messages"] = []
-if "trigger_rerun" not in st.session_state:
-    st.session_state["trigger_rerun"] = False
 
 st.title("🧾 Smart BAS Assistant")
 st.caption("Upload invoices and chat about your BAS or GST.")
@@ -47,14 +45,11 @@ else:
 # ------------------------------
 message = st.chat_input("Ask a question (e.g., 'How much GST did I pay?')")
 
-# --- Handle deferred rerun flag
-if st.session_state["trigger_rerun"]:
-    st.session_state["trigger_rerun"] = False
-    st.rerun()
-
 if message:
+    # Record user message
     st.session_state["messages"].append({"role": "user", "content": message})
 
+    # Build request payload
     data = {"message": message}
     files_payload = None
 
@@ -66,7 +61,7 @@ if message:
             files_payload = [("files", (f.name, f.read(), f.type)) for f in uploaded_files]
             endpoint = API_URL_BATCH
     else:
-        endpoint = API_URL_SINGLE
+        endpoint = API_URL_SINGLE  # Chat-only
 
     with st.spinner("Processing..."):
         try:
@@ -79,16 +74,5 @@ if message:
         except Exception as e:
             bot_reply = f"❌ Connection error: {e}"
 
-    # --- Display reply immediately
+    # Append assistant reply immediately
     st.session_state["messages"].append({"role": "assistant", "content": bot_reply})
-
-    # --- Close any uploaded files
-    if uploaded_files:
-        if isinstance(uploaded_files, list):
-            for f in uploaded_files:
-                f.close()
-        else:
-            uploaded_files.close()
-
-        # set flag for rerun after UI renders this cycle
-        st.session_state["trigger_rerun"] = True
