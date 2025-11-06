@@ -210,14 +210,14 @@ class ChatBASAgent:
         # --- Reflective reasoning: derive cashflow context
         if liability < 0:
             context_line = (
-                f"You’ve paid more GST (${gst_paid:.2f}) than you collected (${gst_collected:.2f}), "
+                f"You've paid more GST (${gst_paid:.2f}) than you collected (${gst_collected:.2f}), "
                 f"so a refund of ${abs(liability):.2f} is due. "
                 "That suggests your expenses are higher than your taxable sales."
             )
         elif liability > 0:
             context_line = (
-                f"You’ve collected more GST (${gst_collected:.2f}) than you paid (${gst_paid:.2f}), "
-                f"so you’ll likely owe about ${liability:.2f} in your next BAS. "
+                f"You've collected more GST (${gst_collected:.2f}) than you paid (${gst_paid:.2f}), "
+                f"so you'll likely owe about ${liability:.2f} in your next BAS. "
                 "You might consider setting those funds aside to avoid surprises."
             )
         else:
@@ -253,7 +253,7 @@ class ChatBASAgent:
             f"- GST Paid: ${gst_paid:.2f}\n"
             f"- Net Liability / Refund: ${liability:.2f}\n\n"
             f"💬 **Interpretation:** {context_line}\n"
-            "If you’d like, I can estimate your quarterly BAS position or flag categories with rising costs."
+            "If you'd like, I can estimate your quarterly BAS position or flag categories with rising costs."
         )
 
         formatted = self._clean_final_output(formatted)
@@ -326,7 +326,7 @@ class ChatBASAgent:
         # Reflective post-processing (improve phrasing + check relevance)
         reflection_prompt = (
             "Review the following BAS summary for clarity and usefulness to a café owner. "
-            "Ensure it’s helpful and easy to understand, with plain Australian English. "
+            "Ensure it's helpful and easy to understand, with plain Australian English. "
             "If improvements are needed, rewrite it. Otherwise, return it unchanged.\n\n"
             f"{graph_output}"
         )
