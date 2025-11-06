@@ -89,9 +89,10 @@ if message:
     # ------------------------------
     # Display reply & cleanup
     # ------------------------------
+     # Display reply & cleanup
     st.session_state["messages"].append({"role": "assistant", "content": bot_reply})
 
-    # Safely close and reset uploader (no direct session write)
+    # Safely close and reset uploader
     if uploaded_files:
         if isinstance(uploaded_files, list):
             for f in uploaded_files:
@@ -100,7 +101,5 @@ if message:
             uploaded_files.close()
 
         # 🚀 Trigger UI refresh to clear uploader
-        st.experimental_rerun()
+        st.rerun()
 
-    # Refresh chat UI
-    st.rerun()
