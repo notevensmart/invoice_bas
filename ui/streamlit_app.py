@@ -14,8 +14,6 @@ st.set_page_config(page_title="Smart BAS Assistant", page_icon="🧾", layout="c
 
 if "messages" not in st.session_state:
     st.session_state["messages"] = []
-if "clear_upload" not in st.session_state:
-    st.session_state["clear_upload"] = False
 
 st.title("🧾 Smart BAS Assistant")
 st.caption("Upload invoices and chat about your BAS or GST.")
@@ -47,11 +45,6 @@ else:
         key="batch_uploader",
         accept_multiple_files=True,
     )
-
-# 🔄 Reset uploader if flagged after previous run
-if st.session_state.get("clear_upload"):
-    st.session_state["clear_upload"] = False
-    uploaded_files = None
 
 # ------------------------------
 # Chat Input Field
@@ -94,21 +87,19 @@ if message:
             bot_reply = f"❌ Connection error: {e}"
 
     # ------------------------------
-    # Display reply
+    # Display reply & cleanup
     # ------------------------------
+     # Display reply & cleanup
     st.session_state["messages"].append({"role": "assistant", "content": bot_reply})
 
-    # ------------------------------
-    # Cleanup uploader AFTER response
-    # ------------------------------
+    # Safely close and reset uploader
     if uploaded_files:
-        # Close all uploaded files safely
         if isinstance(uploaded_files, list):
             for f in uploaded_files:
                 f.close()
         else:
             uploaded_files.close()
 
-        # Mark for clearing on next rerun
-        st.session_state["clear_upload"] = True
+        # 🚀 Trigger UI refresh to clear uploader
         st.rerun()
+
