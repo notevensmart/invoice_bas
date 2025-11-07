@@ -340,11 +340,11 @@ class ChatBASAgent:
 
         # Reflective post-processing (improve phrasing + check relevance)
         reflection_prompt = (
-            "Review the following BAS summary for clarity and usefulness to a café owner. "
-            "Ensure it's helpful and easy to understand, with plain Australian English. "
-            "If improvements are needed, rewrite it. Otherwise, return it unchanged.\n\n"
-            f"{graph_output}"
-        )
+        "You are a writing assistant. "
+        "Improve the following BAS summary so it is clear, friendly, and easy for a small business owner to understand. "
+        "Do not describe your edits or say what you changed — only return the improved summary itself.\n\n"
+        f"{graph_output}")
+                            
         reflection_resp = self.llm.invoke(reflection_prompt)
         reflection_text = reflection_resp if isinstance(reflection_resp, str) else reflection_resp.content
 
