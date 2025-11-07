@@ -26,6 +26,11 @@ async def process_batch_invoices(files: list[UploadFile]):
             parsed = parse_invoice(text)
             validated = validate_invoice(parsed)
             result = calculate_bas([validated])
+            print("DEBUG-INVOICE:")
+            print("Text snippet:", text[:200])
+            print("Parsed:", parsed)
+            print("Validated:", validated)
+            print("Result:", result)
             return result
         except Exception as e:
             # Safe fallback: return zeros if any invoice fails
