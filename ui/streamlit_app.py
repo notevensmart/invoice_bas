@@ -1,103 +1,94 @@
 import streamlit as st
 import requests
 
-# ------------------------------
-# API Endpoints
-# ------------------------------
 API_URL_SINGLE = "https://invoicebas-production.up.railway.app/chat"
 API_URL_BATCH  = "https://invoicebas-production.up.railway.app/process-batch"
 
-# ------------------------------
-# Streamlit Config
-# ------------------------------
-st.set_page_config(page_title="Smart BAS Assistant", page_icon="🧾", layout="centered")
+st.set_page_config(page_title="Smart BAS Assistant", page_icon="🧾", layout="wide")
 
-if "messages" not in st.session_state:
-    st.session_state["messages"] = []  # list of {"role": "user"|"assistant", "content": str}
+# Layout: two columns → chat on left, notes on right
+col_chat, col_notes = st.columns([3, 1])
 
-st.title("🧾 Smart BAS Assistant")
-st.caption("Upload invoices and chat about your BAS or GST.")
+with col_chat:
+    st.title("🧾 Smart BAS Assistant")
+    st.caption("Upload invoices and chat about your BAS or GST.")
 
-# ------------------------------
-# Controls (stable widgets)
-#   - One uploader (accepts many); we decide single vs batch in code
-#   - Radio doesn't rebuild uploader, so no state weirdness
-# ------------------------------
-mode = st.radio("Upload mode:", ["Single Invoice", "Batch Upload"], horizontal=True)
+    if "messages" not in st.session_state:
+        st.session_state["messages"] = []
 
-uploaded_files = st.file_uploader(
-    "Upload invoice(s) (PDF or image)",
-    type=["pdf", "png", "jpg", "jpeg"],
-    accept_multiple_files=True,      # keep one consistent widget
-)
+    # Chat history
+    chat_box = st.container(height=420)
+    for msg in st.session_state["messages"]:
+        with chat_box:
+            st.chat_message(msg["role"]).markdown(msg["content"], unsafe_allow_html=True)
 
-# ------------------------------
-# Chat Input FIRST (so we can render history AFTER updates)
-# ------------------------------
-message = st.chat_input("Ask a question (e.g., 'How much GST did I pay?')")
+    # Mode + file upload
+    mode = st.radio("Upload mode:", ["Single Invoice", "Batch Upload"], horizontal=True)
+    uploaded_files = st.file_uploader(
+        "Upload invoice(s) (PDF or image)",
+        type=["pdf", "png", "jpg", "jpeg"],
+        accept_multiple_files=True,
+    )
 
-if message:
-    # 1) Record the user message now
-    st.session_state["messages"].append({"role": "user", "content": message})
+    # Chat input
+    message = st.chat_input("Ask a question (e.g., 'How much GST did I pay?')")
 
-    # 2) Build request payload
-    data = {"message": message}
-    files_payload = None
+    if message:
+        st.session_state["messages"].append({"role": "user", "content": message})
+        data = {"message": message}
 
-    if uploaded_files:
-        # If Single mode AND exactly one file → /chat (single)
-        if mode == "Single Invoice" and len(uploaded_files) == 1:
-            f = uploaded_files[0]
-            files_payload = {"file": (f.name, f.read(), f.type)}
-            endpoint = API_URL_SINGLE
-        else:
-            # Otherwise treat as batch
-            files_payload = [("files", (f.name, f.read(), f.type)) for f in uploaded_files]
-            endpoint = API_URL_BATCH
-    else:
-        # No files → pure conversational mode
-        endpoint = API_URL_SINGLE
-
-    # 3) Call backend
-    with st.spinner("Processing ..."):
-        try:
-            r = requests.post(endpoint, data=data, files=files_payload)
-            if r.status_code == 200:
-                payload = r.json()
-
-                # Prefer unified "response" if backend provides it
-                if isinstance(payload, dict) and "response" in payload:
-                    reply = payload["response"]
-
-                # Fallback: if batch returns only aggregate fields
-                elif isinstance(payload, dict) and "aggregate_summary" in payload:
-                    s = payload["aggregate_summary"]
-                    try:
-                        reply = (
-                            "📦 **Batch Summary**\n"
-                            f"- GST Collected: ${float(s.get('gst_collected', 0)):.2f}\n"
-                            f"- GST Paid: ${float(s.get('gst_paid', 0)):.2f}\n"
-                            f"- Net BAS Position: ${float(s.get('net_liability', 0)):.2f}\n\n"
-                            "Would you like me to break this down per supplier or compare months?"
-                        )
-                    except Exception:
-                        reply = f"✅ Batch processed.\n\nRaw result:\n```\n{payload}\n```"
-
-                else:
-                    # Last-resort fallback: show whatever we got
-                    reply = f"✅ Processed.\n\n```\n{payload}\n```"
+        # Decide endpoint
+        if uploaded_files:
+            if mode == "Single Invoice" and len(uploaded_files) == 1:
+                files_payload = {"file": (uploaded_files[0].name, uploaded_files[0].read(), uploaded_files[0].type)}
+                endpoint = API_URL_SINGLE
             else:
-                reply = f"⚠️ Backend error ({r.status_code})"
-        except Exception as e:
-            reply = f"❌ Connection error: {e}"
+                files_payload = [("files", (f.name, f.read(), f.type)) for f in uploaded_files]
+                endpoint = API_URL_BATCH
+        else:
+            files_payload = None
+            endpoint = API_URL_SINGLE
 
-    # 4) Append assistant reply
-    st.session_state["messages"].append({"role": "assistant", "content": reply})
+        with st.spinner("Processing..."):
+            try:
+                r = requests.post(endpoint, data=data, files=files_payload)
+                if r.status_code == 200:
+                    payload = r.json()
+                    reply = payload.get("response", str(payload))
+                else:
+                    reply = f"⚠️ Backend error ({r.status_code})"
+            except Exception as e:
+                reply = f"❌ Connection error: {e}"
 
-# ------------------------------
-# NOW render chat history (includes any new messages from this turn)
-# ------------------------------
-chat_box = st.container(height=420)
-for msg in st.session_state["messages"]:
-    with chat_box:
-        st.chat_message(msg["role"]).markdown(msg["content"], unsafe_allow_html=True)
+        st.session_state["messages"].append({"role": "assistant", "content": reply})
+
+# ---------------- Notes / Tips column ----------------
+with col_notes:
+    st.markdown("### Dev Comments")
+    st.markdown(
+        """
+        ** Version 1.0 **
+        **Team Vision**
+        To create a one-stop BAS assistant that understands your business activity, automates paperwork, and provides data-driven insights — not just reports
+        **Common Issues & Fixes**
+        - If you receive a backend error after the first message then please retry, it should work the second time.
+        - To engage in conversation with the agent, make sure all files are removed from the dropdown.
+        
+        **Best Practices**
+        - Use clear scans or PDFs for accurate GST extraction.   
+        - If results seem off, re-upload cleaner copies or check ABN formatting.
+
+        **Need Help?**
+        You can type questions like:
+        - “What does my BAS summary mean?”
+        - “How much refund am I getting?”
+        - “Compare my suppliers.”
+
+        **Extensions for clients**
+        - Direct integrations with Xero, QuickBooks, or Gmail for automatic invoice fetching.
+        - Secure cloud storage and team-based access.
+        - Custom dashboards to visualise BAS, supplier trends, or cashflow insights.
+        - Private deployments on your preferred cloud (GCP, AWS, or Azure).
+        """
+        
+    )
