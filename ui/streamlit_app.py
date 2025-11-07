@@ -67,18 +67,18 @@ with col_notes:
     st.markdown("### Dev Comments")
     st.markdown(
         """
-        ** Version 1.0 **
-        **Team Vision**
-        To create a one-stop BAS assistant that understands your business activity, automates paperwork, and provides data-driven insights — not just reports
-        **Common Issues & Fixes**
+        ** Version 1.0 ** \n
+        **Team Vision** \n
+        To create a one-stop BAS assistant that understands your business activity, automates paperwork, and provides data-driven insights — not just reports \n
+        **Common Issues & Fixes** 
         - If you receive a backend error after the first message then please retry, it should work the second time.
         - To engage in conversation with the agent, make sure all files are removed from the dropdown.
         
-        **Best Practices**
+        **Best Practices** 
         - Use clear scans or PDFs for accurate GST extraction.   
         - If results seem off, re-upload cleaner copies or check ABN formatting.
 
-        **Need Help?**
+        **Need Help?** \n
         You can type questions like:
         - “What does my BAS summary mean?”
         - “How much refund am I getting?”
