@@ -5,6 +5,13 @@ from fastapi.responses import JSONResponse
 from app.ocr import OCRService
 from app.core_tools import parse_invoice, validate_invoice, calculate_bas
 from app.agent import ChatBASAgent
+import logging 
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+)
+logger = logging.getLogger(__name__)
 
 ocr_service = OCRService()
 chat_agent = ChatBASAgent()
@@ -26,11 +33,9 @@ async def process_batch_invoices(files: list[UploadFile]):
             parsed = parse_invoice(text)
             validated = validate_invoice(parsed)
             result = calculate_bas([validated])
-            print("DEBUG-INVOICE:")
-            print("Text snippet:", text[:200])
-            print("Parsed:", parsed)
-            print("Validated:", validated)
-            print("Result:", result)
+            logger.info(f"DEBUG-INVOICE parsed: {parsed}")
+            logger.info(f"DEBUG-INVOICE validated: {validated}")
+            logger.info(f"DEBUG-INVOICE result: {result}")
             return result
         except Exception as e:
             # Safe fallback: return zeros if any invoice fails
