@@ -69,7 +69,7 @@ with col_notes:
         """
         ** Version 1.0 ** \n
         **Team Vision** \n
-        To create a one-stop BAS assistant that understands your business activity, automates paperwork, and provides data-driven insights — not just reports \n
+        To create a one-stop BAS assistant that understands your business activity, automates paperwork, and provides data-driven insights — not just reports. \n
         **Common Issues & Fixes** 
         - If you receive a backend error after the first message then please retry, it should work the second time.
         - To engage in conversation with the agent, make sure all files are removed from the dropdown.
