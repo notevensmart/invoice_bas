@@ -3,6 +3,7 @@ import asyncio
 from fastapi.middleware.cors import CORSMiddleware
 from app.ocr import OCRService
 from app.agent import ChatBASAgent
+from app.batch_processor import process_batch_invoices_sync
 from fastapi.responses import JSONResponse
 from typing import List
 
@@ -52,102 +53,8 @@ async def chat_with_bas_agent(
             status_code=500,
         )
 @ app.post("/process-batch")
-async def process_batch(
-    files: List[UploadFile] = File(...),
-):
-    """
-    Accept multiple invoices, process them concurrently, and return
-    both individual results and an aggregated BAS summary.
-    """
-    try:
-        async def handle_file(file: UploadFile):
-            content = await file.read()
-            extracted = await asyncio.to_thread(ocr_service.extract_text, content)
-            result = chat_agent.run(extracted, mode="invoice")
-            return result
-
-        # Run all OCR + agent calls concurrently
-        results = await asyncio.gather(*(handle_file(f) for f in files))
-
-        # -------------------------
-        # Aggregate BAS summaries
-        # -------------------------
-        total_collected = total_paid = 0.0
-        for r in results:
-            out = r.get("response", "")
-            try:
-                if "GST Collected:" in out and "GST Paid:" in out:
-                    lines = out.splitlines()
-                    for line in lines:
-                        if "GST Collected" in line:
-                            total_collected += float(line.split("$")[-1].replace(",", "").strip())
-                        if "GST Paid" in line:
-                            total_paid += float(line.split("$")[-1].replace(",", "").strip())
-            except Exception:
-                pass
-
-        net_liability = total_collected - total_paid
-        num_invoices = len(results)
-
-        aggregate = {
-            "gst_collected": round(total_collected, 2),
-            "gst_paid": round(total_paid, 2),
-            "net_liability": round(net_liability, 2),
-            "invoice_count": num_invoices,
-        }
-
-        # -------------------------
-        # Build user-friendly summary
-        # -------------------------
-        position_text = (
-            "You'll likely owe GST this period."
-            if net_liability > 0
-            else "You're due a refund this period."
-            if net_liability < 0
-            else "Your GST collected and paid are balanced this period."
-        )
-
-        summary_text = (
-            f"📦 **Batch Summary**\n"
-            f"- Invoices Processed: {num_invoices}\n"
-            f"- GST Collected: ${aggregate['gst_collected']:.2f}\n"
-            f"- GST Paid: ${aggregate['gst_paid']:.2f}\n"
-            f"- Net BAS Position: ${aggregate['net_liability']:.2f}\n\n"
-            f"💬 {position_text}\n\n"
-            "Would you like me to compare suppliers or forecast the next BAS?"
-        )
-
-        # -------------------------
-        # Feed summary into memory
-        # -------------------------
-        memory_prompt = (
-            f"Remember this batch BAS summary for context:\n\n"
-            f"{summary_text}\n\n"
-            "This represents the most recent batch of invoices processed."
-        )
-
-        agent_result = chat_agent.run(memory_prompt, mode="chat")
-
-        # Optional explicit logging
-        chat_agent.history.append(("system", f"Stored batch summary: {summary_text}"))
-
-        # -------------------------
-        # Return consistent response
-        # -------------------------
-        return JSONResponse(
-            content={
-                "response": summary_text,
-                "aggregate_summary": aggregate,
-                "batch_results": results,
-            },
-            status_code=200,
-        )
-
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return JSONResponse(content={"error": str(e)}, status_code=500)
-
-
+async def process_batch(files: List[UploadFile] = File(...)):
+    return process_batch_invoices_sync(files)
+       
 # Required for Vercel / Railway handlers
 handler = app
