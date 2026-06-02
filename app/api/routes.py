@@ -11,12 +11,23 @@ from app.api.dependencies import (
 )
 from app.engine.batch import BatchProcessor
 from app.engine.corrections import CorrectionService
+from app.engine.parser import InvoiceParser
 from app.engine.processor import InvoiceProcessor
 from app.engine.schemas import BatchResult, CorrectionRequest, InvoiceResult
 from app.persistence.repositories import InvoiceRepository
 
 
 router = APIRouter()
+
+
+@router.get("/system/status")
+async def system_status() -> dict[str, object]:
+    parser = InvoiceParser()
+    return {
+        "status": "ok",
+        "llm_enabled": parser.use_llm,
+        "parser_mode": "llm" if parser.use_llm else "deterministic",
+    }
 
 
 @router.post("/invoices/process", response_model=InvoiceResult)

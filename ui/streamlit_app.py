@@ -4,13 +4,14 @@ import json
 import os
 from html import escape
 from decimal import Decimal
+from pathlib import Path
 from typing import Any
 
 import requests
 import streamlit as st
 
 
-API_BASE_URL = os.getenv("INVOICE_API_URL", "http://localhost:8000")
+API_BASE_URL = os.getenv("INVOICE_API_URL", "http://localhost:8000").rstrip("/")
 
 STATUS_ORDER = ("ready", "needs_review", "failed")
 STATUS_META = {
@@ -45,6 +46,13 @@ FIELD_LABELS = {
     "currency": "Currency",
 }
 MONEY_FIELDS = {"subtotal", "gst", "total", "unit_price", "amount", "gst_amount"}
+DEMO_BATCH_FILES = [
+    "clean_under_1000.pdf",
+    "clean_over_1000.pdf",
+    "invalid_abn.pdf",
+    "gst_not_shown.pdf",
+    "over_1000_missing_buyer.pdf",
+]
 
 
 def inject_styles() -> None:
@@ -175,19 +183,29 @@ def inject_styles() -> None:
 
 
 def api_post_files(endpoint: str, files_payload: list[tuple[str, tuple[str, bytes, str]]]) -> dict[str, Any]:
-    response = requests.post(f"{API_BASE_URL}{endpoint}", files=files_payload, timeout=120)
+    response = requests.post(api_url(endpoint), files=files_payload, timeout=120)
     response.raise_for_status()
     return response.json()
 
 
 def api_patch(endpoint: str, payload: dict[str, Any]) -> dict[str, Any]:
-    response = requests.patch(f"{API_BASE_URL}{endpoint}", json=payload, timeout=60)
+    response = requests.patch(api_url(endpoint), json=payload, timeout=60)
     response.raise_for_status()
     return response.json()
 
 
 def api_post_json(endpoint: str, payload: dict[str, Any] | None = None) -> dict[str, Any]:
-    response = requests.post(f"{API_BASE_URL}{endpoint}", json=payload or {}, timeout=60)
+    response = requests.post(api_url(endpoint), json=payload or {}, timeout=60)
+    response.raise_for_status()
+    return response.json()
+
+
+def api_url(endpoint: str) -> str:
+    return f"{API_BASE_URL}/{endpoint.lstrip('/')}"
+
+
+def api_get_json(endpoint: str, timeout: int = 5) -> dict[str, Any]:
+    response = requests.get(api_url(endpoint), timeout=timeout)
     response.raise_for_status()
     return response.json()
 
@@ -384,7 +402,15 @@ def render_detail(result: dict[str, Any]) -> None:
     with payload_tab:
         payload = result.get("xero_payload")
         if payload:
-            st.code(json.dumps(payload, indent=2), language="json")
+            payload_text = json.dumps(payload, indent=2)
+            st.download_button(
+                "Download Xero Payload",
+                data=payload_text,
+                file_name=f"xero_payload_{invoice_number}.json",
+                mime="application/json",
+                use_container_width=True,
+            )
+            st.code(payload_text, language="json")
         else:
             st.info("No final Xero payload is available until this invoice is ready.")
     with explanation_tab:
@@ -398,6 +424,13 @@ def render_validation_panel(result: dict[str, Any]) -> None:
         return
 
     for issue in issues:
+        checked = False
+        if issue.get("field"):
+            checked = st.checkbox(
+                f"{issue.get('field')} needs attention",
+                value=False,
+                key=f"issue_check_{result['document_id']}_{issue.get('code')}_{issue.get('field')}",
+            )
         st.markdown(
             '<div class="issue-row">'
             f'<strong>{escape(str(issue.get("code") or "ISSUE"))}</strong>'
@@ -427,6 +460,7 @@ def render_fields_table(result: dict[str, Any]) -> None:
             }
         )
     st.dataframe(rows, hide_index=True, use_container_width=True)
+    render_source_summary(extraction)
 
     line_items = extraction.get("line_items") or []
     if line_items:
@@ -446,6 +480,51 @@ def render_fields_table(result: dict[str, Any]) -> None:
             )
         st.markdown("#### Line Items")
         st.dataframe(item_rows, hide_index=True, use_container_width=True)
+
+
+def render_source_summary(extraction: dict[str, Any]) -> None:
+    sources = extraction.get("field_sources") or {}
+    line_items = extraction.get("line_items") or []
+    counts: dict[str, int] = {}
+    for source in sources.values():
+        counts[source] = counts.get(source, 0) + 1
+    for item in line_items:
+        source = item.get("source")
+        if source:
+            counts[source] = counts.get(source, 0) + 1
+    if not counts:
+        return
+    labels = {
+        "llm": "LLM extracted",
+        "regex_rescue": "Rule rescued",
+        "derived_arithmetic": "Derived",
+        "fallback_single_line": "Fallback line",
+        "user_correction": "User corrected",
+        "parser": "Parser",
+    }
+    summary = " | ".join(
+        f"{labels.get(source, source)}: {count}"
+        for source, count in sorted(counts.items())
+    )
+    st.caption(f"Extraction sources: {summary}")
+
+
+def render_correction_audit(result: dict[str, Any]) -> None:
+    corrections = result.get("corrections") or []
+    if not corrections:
+        st.caption("No corrections applied yet.")
+        return
+    rows = [
+        {
+            "Field": correction.get("field"),
+            "Original": correction.get("original_value"),
+            "Corrected": correction.get("corrected_value"),
+            "Source": correction.get("source"),
+        }
+        for correction in corrections
+    ]
+    st.markdown("#### Correction History")
+    st.dataframe(rows, hide_index=True, use_container_width=True)
 
 
 def render_batch_metrics(batch: dict[str, Any]) -> None:
@@ -486,10 +565,27 @@ def prime_queue_selection(batch: dict[str, Any]) -> None:
 
 def api_health_status() -> str:
     try:
-        response = requests.get(f"{API_BASE_URL}/health", timeout=2)
+        response = requests.get(api_url("/health"), timeout=2)
         return "Connected" if response.ok else "Unavailable"
     except Exception:
         return "Unavailable"
+
+
+def system_status() -> dict[str, Any]:
+    try:
+        return api_get_json("/system/status", timeout=3)
+    except Exception:
+        return {}
+
+
+def demo_batch_payload() -> list[tuple[str, tuple[str, bytes, str]]]:
+    root = Path(__file__).resolve().parents[1] / "app" / "tests" / "fixtures" / "invoices"
+    payload = []
+    for filename in DEMO_BATCH_FILES:
+        path = root / filename
+        if path.exists():
+            payload.append(("files", (filename, path.read_bytes(), "application/pdf")))
+    return payload
 
 
 def render_correction_form(result: dict[str, Any]) -> None:
@@ -561,6 +657,7 @@ def render_correction_form(result: dict[str, Any]) -> None:
                     st.error(f"Correction failed: {exc}")
             else:
                 st.info("No changed fields.")
+    render_correction_audit(result)
 
 
 st.set_page_config(page_title="Invoice Automation POC", layout="wide")
@@ -574,8 +671,8 @@ st.markdown(
     (
         '<div class="app-heading">'
         '<div>'
-        '<h1>Invoice Review Workbench</h1>'
-        '<div class="app-subtitle">Australian supplier invoice review</div>'
+        '<h1>Smart BAS Assistant POC</h1>'
+        '<div class="app-subtitle">Upload supplier invoice PDFs, extract GST and invoice details, review uncertain items, and prepare Xero-ready draft bill payloads.</div>'
         '</div>'
         f'{connection_badge}'
         '</div>'
@@ -585,9 +682,32 @@ st.markdown(
 
 with st.sidebar:
     st.markdown("### System")
+    status_payload = system_status()
     st.text_input("API", value=API_BASE_URL, disabled=True)
     st.text_input("Backend", value=api_health_status(), disabled=True)
+    st.text_input(
+        "Parser",
+        value=status_payload.get("parser_mode", "unknown"),
+        disabled=True,
+    )
+    st.markdown("### How It Works")
+    st.caption("PDF upload -> OCR/text extraction -> LLM parser -> deterministic validation -> review -> Xero draft payload.")
+    st.markdown("### Statuses")
+    st.caption("Ready: draftable. Needs Review: human check required. Failed: blocked by OCR, parser, or validation.")
     st.markdown("### Demo")
+    if st.button("Load demo batch", use_container_width=True):
+        try:
+            payload = demo_batch_payload()
+            if not payload:
+                st.error("Demo PDFs were not found in the repo.")
+            else:
+                batch = api_post_files("/batches/process", payload)
+                st.session_state["last_batch"] = batch
+                prime_queue_selection(batch)
+                st.success("Demo batch processed.")
+                st.rerun()
+        except Exception as exc:
+            st.error(f"Demo batch failed: {exc}")
     if st.button("Reset demo data"):
         try:
             api_post_json("/demo/reset")

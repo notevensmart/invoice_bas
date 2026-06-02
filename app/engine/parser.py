@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import platform
 import re
 import shutil
 import subprocess
@@ -12,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from pydantic import ValidationError
+import requests
 
 try:
     from dotenv import load_dotenv
@@ -211,15 +213,14 @@ class InvoiceParser:
         if not is_real_groq_api_key(api_key):
             raise RuntimeError("GROQ_API_KEY is not configured.")
 
-        payload = self._call_groq_with_curl(api_key, prompt)
+        try:
+            payload = self._call_groq_with_requests(api_key, prompt)
+        except Exception:
+            payload = self._call_groq_with_curl(api_key, prompt)
         return str(payload["choices"][0]["message"]["content"])
 
-    def _call_groq_with_curl(self, api_key: str, prompt: str) -> dict[str, Any]:
-        curl = shutil.which("curl.exe") or shutil.which("curl")
-        if not curl:
-            raise RuntimeError("curl is required for Groq calls in this local runtime.")
-
-        request_payload = {
+    def _groq_request_payload(self, prompt: str) -> dict[str, Any]:
+        return {
             "model": os.getenv("GROQ_MODEL", "llama-3.1-8b-instant"),
             "temperature": 0,
             "messages": [
@@ -233,6 +234,26 @@ class InvoiceParser:
                 {"role": "user", "content": prompt},
             ],
         }
+
+    def _call_groq_with_requests(self, api_key: str, prompt: str) -> dict[str, Any]:
+        response = requests.post(
+            "https://api.groq.com/openai/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            },
+            json=self._groq_request_payload(prompt),
+            timeout=60,
+        )
+        response.raise_for_status()
+        return response.json()
+
+    def _call_groq_with_curl(self, api_key: str, prompt: str) -> dict[str, Any]:
+        curl = shutil.which("curl.exe") or shutil.which("curl")
+        if not curl:
+            raise RuntimeError("curl is required for Groq calls in this local runtime.")
+
+        request_payload = self._groq_request_payload(prompt)
         with tempfile.TemporaryDirectory(prefix="invoice_groq_") as temp_dir:
             temp_path = Path(temp_dir)
             body_path = temp_path / "body.json"
@@ -252,8 +273,12 @@ class InvoiceParser:
                 ),
                 encoding="utf-8",
             )
+            command = [curl]
+            if platform.system() == "Windows":
+                command.append("--ssl-no-revoke")
+            command.extend(["--config", str(config_path)])
             completed = subprocess.run(
-                [curl, "--ssl-no-revoke", "--config", str(config_path)],
+                command,
                 capture_output=True,
                 text=True,
                 timeout=75,
