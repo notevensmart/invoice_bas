@@ -7,7 +7,6 @@ from fastapi.testclient import TestClient
 from app.api.dependencies import (
     get_batch_processor,
     get_correction_service,
-    get_demo_reset_enabled,
     get_processor,
     get_repository,
 )
@@ -27,7 +26,7 @@ def _pdf(name: str):
         yield (f"{name}.pdf", file_handle, "application/pdf")
 
 
-def _client(reset_enabled: bool = False):
+def _client():
     repository = InMemoryInvoiceRepository()
     processor = InvoiceProcessor(
         repository=repository,
@@ -37,7 +36,6 @@ def _client(reset_enabled: bool = False):
     app.dependency_overrides[get_processor] = lambda: processor
     app.dependency_overrides[get_batch_processor] = lambda: BatchProcessor(processor)
     app.dependency_overrides[get_correction_service] = lambda: CorrectionService(processor)
-    app.dependency_overrides[get_demo_reset_enabled] = lambda: reset_enabled
     return TestClient(app), repository
 
 
@@ -100,15 +98,8 @@ def test_batch_get_invoice_get_batch_and_correction_endpoints():
         app.dependency_overrides.clear()
 
 
-def test_demo_reset_endpoint_is_development_gated_and_clears_duplicate_state():
-    disabled_client, _ = _client(reset_enabled=False)
-    try:
-        denied = disabled_client.post("/demo/reset")
-        assert denied.status_code == 403
-    finally:
-        app.dependency_overrides.clear()
-
-    client, _ = _client(reset_enabled=True)
+def test_demo_reset_endpoint_clears_duplicate_state_without_dev_gate():
+    client, _ = _client()
     try:
         with _pdf("duplicate_a") as first_file:
             first = client.post("/invoices/process", files={"file": first_file}).json()

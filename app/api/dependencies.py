@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 from functools import lru_cache
 
 from app.engine.batch import BatchProcessor
@@ -27,14 +26,3 @@ def get_batch_processor() -> BatchProcessor:
 @lru_cache
 def get_correction_service() -> CorrectionService:
     return CorrectionService(get_processor())
-
-
-def get_demo_reset_enabled() -> bool:
-    reset_enabled = os.getenv("INVOICE_DEMO_RESET_ENABLED", "").lower()
-    app_env = os.getenv("APP_ENV", "").lower()
-    return reset_enabled in {"1", "true", "yes"} or app_env in {
-        "development",
-        "dev",
-        "local",
-        "test",
-    }

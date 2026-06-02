@@ -5,7 +5,6 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from app.api.dependencies import (
     get_batch_processor,
     get_correction_service,
-    get_demo_reset_enabled,
     get_processor,
     get_repository,
 )
@@ -94,13 +93,7 @@ async def get_batch(
 
 @router.post("/demo/reset")
 async def reset_demo_data(
-    enabled: bool = Depends(get_demo_reset_enabled),
     repository: InvoiceRepository = Depends(get_repository),
 ) -> dict[str, str]:
-    if not enabled:
-        raise HTTPException(
-            status_code=403,
-            detail="Demo data reset is only available in development mode.",
-        )
     repository.reset_demo_data()
     return {"status": "reset"}

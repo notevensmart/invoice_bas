@@ -208,6 +208,12 @@ def inject_styles() -> None:
             font-size: 0.82rem;
             margin: -0.35rem 0 0.55rem 0;
           }
+          .field-attention-note {
+            color: #b42318;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin: -0.45rem 0 0.45rem 0;
+          }
         </style>
         """,
         unsafe_allow_html=True,
@@ -397,6 +403,75 @@ def issue_fields(result: dict[str, Any]) -> set[str]:
         for issue in result.get("validation", {}).get("issues", [])
         if issue.get("field")
     }
+
+
+def issue_messages_by_field(result: dict[str, Any]) -> dict[str, list[str]]:
+    messages: dict[str, list[str]] = {}
+    for issue in result.get("validation", {}).get("issues", []):
+        field = issue.get("field")
+        if not field:
+            continue
+        messages.setdefault(str(field), []).append(issue_title(issue.get("code")))
+    return messages
+
+
+def needs_account_attention(result: dict[str, Any]) -> bool:
+    account = result.get("account_code_suggestion") or {}
+    account_code = str(account.get("suggested_account_code") or "").strip().lower()
+    confidence = str(account.get("confidence") or "").strip().lower()
+    return account_code in {"", "unmapped", "not mapped", "none"} or confidence == "low"
+
+
+def css_attr_value(value: str) -> str:
+    return value.replace("\\", "\\\\").replace('"', '\\"')
+
+
+def render_attention_field_styles(labels: list[str]) -> None:
+    if not labels:
+        return
+    selectors = []
+    for label in labels:
+        escaped_label = css_attr_value(label)
+        selectors.append(
+            f'div[data-testid="stTextInput"]:has(input[aria-label="{escaped_label}"])'
+        )
+    label_selectors = ",\n".join(
+        f"{selector} label,\n{selector} label p" for selector in selectors
+    )
+    input_selectors = ",\n".join(
+        f'{selector} div[data-baseweb="input"],\n{selector} input'
+        for selector in selectors
+    )
+    text_selectors = ",\n".join(f"{selector} input" for selector in selectors)
+    st.markdown(
+        f"""
+        <style>
+          {label_selectors} {{
+            color: #b42318 !important;
+            font-weight: 700 !important;
+          }}
+          {input_selectors} {{
+            background: #fff1f3 !important;
+            border-color: #f97066 !important;
+            box-shadow: inset 0 0 0 1px #f97066 !important;
+          }}
+          {text_selectors} {{
+            color: #7a271a !important;
+          }}
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_attention_note(messages: list[str]) -> None:
+    if not messages:
+        return
+    note = "; ".join(dict.fromkeys(messages))
+    st.markdown(
+        f'<div class="field-attention-note">Needs attention: {escape(note)}</div>',
+        unsafe_allow_html=True,
+    )
 
 
 def result_label(result: dict[str, Any]) -> str:
@@ -693,22 +768,22 @@ def render_review_workspace(result: dict[str, Any]) -> None:
     metric_cols[2].metric("Invoice Date", field_display("invoice_date", extraction.get("invoice_date")))
     metric_cols[3].metric("Due Date", field_display("due_date", extraction.get("due_date")))
 
-    evidence_col, edit_col = st.columns([0.53, 0.47], gap="large")
-    with evidence_col:
-        st.markdown("### Original Invoice")
-        render_original_pdf(result)
+    edit_col, validation_col = st.columns([0.56, 0.44], gap="large")
     with edit_col:
         st.markdown("### Review Fields")
         render_correction_form(result)
-
-    with st.expander("Validation Issues", expanded=bool(result.get("validation", {}).get("issues", []))):
+    with validation_col:
+        st.markdown("### Validation")
         render_validation_panel(result)
+        st.markdown("### Account Suggestion")
+        render_account_suggestion(result)
+
     with st.expander("Extracted Fields And Line Items"):
         render_fields_table(result)
-    with st.expander("Account Suggestion", expanded=True):
-        render_account_suggestion(result)
     with st.expander("Explanation"):
         st.markdown(result.get("response") or "")
+    st.markdown("### Original Invoice")
+    render_original_pdf(result)
 
 
 def render_review_page(batch: dict[str, Any]) -> None:
@@ -837,11 +912,21 @@ def demo_batch_specs() -> list[dict[str, Any]]:
     return specs
 
 
+def clear_demo_session_state() -> None:
+    for key in (
+        "last_invoice",
+        "last_batch",
+        "selected_document_id",
+        "selected_document_ids_by_status",
+        "pdf_previews",
+    ):
+        st.session_state.pop(key, None)
+
+
 def render_correction_form(result: dict[str, Any]) -> None:
     extraction = result.get("extraction") or {}
     if not extraction:
         return
-    st.markdown("#### Review Edits")
     editable_fields = [
         "supplier_name",
         "supplier_abn",
@@ -855,6 +940,27 @@ def render_correction_form(result: dict[str, Any]) -> None:
         "total",
         "currency",
     ]
+    messages_by_field = issue_messages_by_field(result)
+    attention_labels = [
+        FIELD_LABELS.get(field, title_text(field))
+        for field in editable_fields
+        if field in messages_by_field
+    ]
+    line_items = extraction.get("line_items") or []
+    line_item_attention = messages_by_field.get("line_items", [])
+    for index, _ in enumerate(line_items):
+        key = f"line_items.{index}.description"
+        if key in messages_by_field or line_item_attention:
+            attention_labels.append(f"Line {index + 1} description")
+    account_attention = needs_account_attention(result)
+    if account_attention:
+        attention_labels.append("Xero account code")
+    render_attention_field_styles(attention_labels)
+    if attention_labels:
+        st.caption("Highlighted fields need a human check before this invoice can be approved.")
+    else:
+        st.caption("No required field edits detected for this invoice.")
+
     original_values = {field: money_text(extraction.get(field)) for field in editable_fields}
     updates = []
     with st.form(f"corrections_{result['document_id']}"):
@@ -867,8 +973,8 @@ def render_correction_form(result: dict[str, Any]) -> None:
                     value=original_values[field],
                     key=f"edit_{result['document_id']}_{field}",
                 )
+                render_attention_note(messages_by_field.get(field, []))
 
-        line_items = extraction.get("line_items") or []
         if line_items:
             st.markdown("Line Items")
             for index, item in enumerate(line_items):
@@ -879,6 +985,7 @@ def render_correction_form(result: dict[str, Any]) -> None:
                     key=f"edit_{result['document_id']}_{key}",
                 )
                 original_values[key] = item.get("description") or ""
+                render_attention_note(messages_by_field.get(key, []) or line_item_attention)
 
         account = result.get("account_code_suggestion") or {}
         edited_values["account_code_suggestion.suggested_account_code"] = st.text_input(
@@ -887,6 +994,8 @@ def render_correction_form(result: dict[str, Any]) -> None:
             key=f"edit_{result['document_id']}_account_code",
         )
         original_values["account_code_suggestion.suggested_account_code"] = account.get("suggested_account_code") or ""
+        if account_attention:
+            render_attention_note(["Xero account code is unmapped or low confidence"])
 
         submitted = st.form_submit_button("Apply Corrections")
         if submitted:
@@ -950,33 +1059,23 @@ with st.sidebar:
             if not specs:
                 st.error("Demo PDFs were not found in the repo.")
             else:
+                api_post_json("/demo/reset")
+                clear_demo_session_state()
                 payload = files_payload_from_specs(specs, "files")
                 batch = api_post_files("/batches/process", payload)
                 st.session_state["last_batch"] = batch
                 store_pdf_previews(batch.get("results", []), specs)
                 prime_queue_selection(batch)
-                st.success("Demo batch processed.")
+                st.success("Demo batch loaded from a clean slate.")
                 st.rerun()
         except Exception as exc:
             st.error(f"Demo batch failed: {exc}")
     if st.button("Reset demo data"):
         try:
             api_post_json("/demo/reset")
-            for key in (
-                "last_invoice",
-                "last_batch",
-                "selected_document_id",
-                "selected_document_ids_by_status",
-                "pdf_previews",
-            ):
-                st.session_state.pop(key, None)
+            clear_demo_session_state()
             st.success("Demo data reset.")
             st.rerun()
-        except requests.HTTPError as exc:
-            if exc.response is not None and exc.response.status_code == 403:
-                st.info("Demo reset is disabled unless the API is running in development mode.")
-            else:
-                st.error(f"Reset failed: {exc}")
         except Exception as exc:
             st.error(f"Reset failed: {exc}")
 
