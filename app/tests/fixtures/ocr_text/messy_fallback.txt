@@ -1,0 +1,12 @@
+Tax Invoice
+Supplier: Bean Collective Pty Ltd
+Supplier ABN: 49 004 028 077
+Invoice Number: BC-775
+Invoice Date: 2026-05-21
+Due Date: 2026-06-05
+Buyer: Luna Cafe Pty Ltd
+Subtotal: $420.00
+GST: $42.00
+Total: $462.00
+Currency: AUD
+Items supplied include espresso beans, grinder parts, and freight.

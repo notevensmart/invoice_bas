@@ -1,0 +1,64 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>
+endobj
+4 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+5 0 obj
+<< /Length 469 >>
+stream
+BT
+/F1 9 Tf
+50 790 Td
+13 TL
+(Tax Invoice) Tj
+T*
+(Supplier: Fresh Farms Produce Pty Ltd) Tj
+T*
+(Supplier ABN: 12 004 044 937) Tj
+T*
+(Invoice Number: FF-3401) Tj
+T*
+(Invoice Date: 2026-05-09) Tj
+T*
+(Due Date: 2026-05-23) Tj
+T*
+(Buyer: Luna Cafe Pty Ltd) Tj
+T*
+(Subtotal: $260.00) Tj
+T*
+(GST: $26.00) Tj
+T*
+(Total: $286.00) Tj
+T*
+(Currency: AUD) Tj
+T*
+(Line Items:) Tj
+T*
+(Vegetables | 2 | 80.00 | 160.00 | 16.00) Tj
+T*
+(Fruit boxes | 1 | 100.00 | 100.00 | 10.00) Tj
+T*
+ET
+endstream
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000241 00000 n 
+0000000311 00000 n 
+trailer
+<< /Size 6 /Root 1 0 R >>
+startxref
+831
+%%EOF

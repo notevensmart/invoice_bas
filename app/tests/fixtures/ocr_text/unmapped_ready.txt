@@ -1,0 +1,13 @@
+Tax Invoice
+Supplier: Harbour Repairs Pty Ltd
+Supplier ABN: 49 004 028 077
+Invoice Number: HR-555
+Invoice Date: 2026-05-11
+Due Date: 2026-06-11
+Buyer: Luna Cafe Pty Ltd
+Subtotal: $75.00
+GST: $7.50
+Total: $82.50
+Currency: AUD
+Line Items:
+Door hinge repair | 1 | 75.00 | 75.00 | 7.50

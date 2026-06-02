@@ -1,16 +1,13 @@
 fastapi
 uvicorn
+python-multipart
 requests
 streamlit
+pydantic>=2
 python-dotenv
-langchain
-langgraph
-langchain-groq 
-pydantic
-pytesseract
-pdf2image
-dotenv
 PyPDF2
-langchain-community
-python-multipart
-          # optional: to build a quick chat UI
+pdf2image
+pytesseract
+langchain-groq
+pytest
+httpx

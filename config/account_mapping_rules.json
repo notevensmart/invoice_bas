@@ -1,0 +1,62 @@
+[
+  {
+    "match": {
+      "supplier_contains": ["officeworks"],
+      "description_contains": ["stationery", "paper", "printer", "office"]
+    },
+    "suggested_account_code": "453",
+    "suggested_account_name": "Office Expenses",
+    "confidence": "high",
+    "reason": "Office supplies usually map to office expenses."
+  },
+  {
+    "match": {
+      "supplier_contains": ["metro coffee", "bean collective", "roasters"],
+      "description_contains": ["coffee", "beans", "espresso"]
+    },
+    "suggested_account_code": "310",
+    "suggested_account_name": "Cost of Goods Sold",
+    "confidence": "high",
+    "reason": "Coffee inputs are normally direct trading stock for hospitality."
+  },
+  {
+    "match": {
+      "supplier_contains": ["cleanpro", "sparkle cleaning"],
+      "description_contains": ["cleaning", "sanitiser", "hygiene"]
+    },
+    "suggested_account_code": "429",
+    "suggested_account_name": "Cleaning",
+    "confidence": "high",
+    "reason": "Cleaning supplier and hygiene terms map to cleaning expenses."
+  },
+  {
+    "match": {
+      "supplier_contains": ["city utilities", "energy"],
+      "description_contains": ["electricity", "gas", "utility"]
+    },
+    "suggested_account_code": "445",
+    "suggested_account_name": "Light, Power and Heating",
+    "confidence": "high",
+    "reason": "Utility charges map to power and heating expenses."
+  },
+  {
+    "match": {
+      "supplier_contains": ["fresh farms", "produce market"],
+      "description_contains": ["produce", "fruit", "vegetables"]
+    },
+    "suggested_account_code": "310",
+    "suggested_account_name": "Cost of Goods Sold",
+    "confidence": "medium",
+    "reason": "Produce purchases are likely direct cost of sales."
+  },
+  {
+    "match": {
+      "supplier_contains": ["webhost", "cloud"],
+      "description_contains": ["hosting", "software", "subscription"]
+    },
+    "suggested_account_code": "485",
+    "suggested_account_name": "Subscriptions",
+    "confidence": "medium",
+    "reason": "Software and hosting terms map to subscriptions."
+  }
+]

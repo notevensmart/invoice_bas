@@ -1,0 +1,14 @@
+Tax Invoice
+Supplier: City Utilities Pty Ltd
+Supplier ABN: 53 004 085 616
+Invoice Number: CU-2207
+Invoice Date: 2026-05-18
+Due Date: 2026-06-18
+Buyer: Luna Cafe Pty Ltd
+Buyer ABN: 51 824 753 556
+Subtotal: $1000.00
+GST: $100.00
+Total: $1100.00
+Currency: AUD
+Line Items:
+Electricity supply | 1 | 1000.00 | 1000.00 | 100.00

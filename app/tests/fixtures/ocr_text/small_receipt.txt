@@ -1,0 +1,12 @@
+Receipt
+Supplier: Sparkle Cleaning Supplies Pty Ltd
+Supplier ABN: 33 051 775 556
+Invoice Number: SP-0081
+Invoice Date: 2026-05-03
+Buyer: Luna Cafe Pty Ltd
+Subtotal: $50.00
+GST: $5.00
+Total: $55.00
+Currency: AUD
+Line Items:
+Sanitiser | 1 | 50.00 | 50.00 | 5.00

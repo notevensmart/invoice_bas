@@ -1,0 +1,474 @@
+[
+  {
+    "name": "unusual_total_labels_gst_inclusive",
+    "expected_status": "ready",
+    "text": "TAX INVOICE\nNimbus Office Supplies Pty Ltd\nSupplier ABN: 51 824 753 556\nInvoice ref: NOS-7781\nIssued on: 31/05/2026\nPayment requested by: 14/06/2026\nBill to: Luna Cafe Pty Ltd\nTaxable supplies: $180.00\nGST collected: $18.00\nFinal payable (GST inclusive): AUD $198.00\nPayment reference NOS-7781-198\nDo not use the $35.00 late fee unless overdue.",
+    "expected": {
+      "supplier_name": "Nimbus Office Supplies Pty Ltd",
+      "supplier_abn": "51 824 753 556",
+      "invoice_number": "NOS-7781",
+      "invoice_date": "2026-05-31",
+      "due_date": "2026-06-14",
+      "buyer_name": "Luna Cafe Pty Ltd",
+      "buyer_abn": null,
+      "subtotal": "180.00",
+      "gst": "18.00",
+      "total": "198.00",
+      "currency": "AUD",
+      "line_items": [
+        {
+          "description": "Invoice NOS-7781",
+          "quantity": "1.00",
+          "unit_price": "180.00",
+          "amount": "180.00",
+          "gst_amount": "18.00",
+          "tax_treatment": "GST"
+        }
+      ]
+    }
+  },
+  {
+    "name": "supplier_buyer_abns_close",
+    "expected_status": "ready",
+    "text": "Apex Cleaning Services Pty Ltd\nABN 53 004 085 616\nTax Invoice APEX-445\nDate 2026-05-03\nTo: Luna Cafe Pty Ltd ABN 51 824 753 556\nCleaning crew after-hours service\nSubtotal $500.00\nGST Amount $50.00\nAmount Due $550.00\nPlease quote buyer ABN and invoice number when paying.",
+    "expected": {
+      "supplier_name": "Apex Cleaning Services Pty Ltd",
+      "supplier_abn": "53 004 085 616",
+      "invoice_number": "APEX-445",
+      "invoice_date": "2026-05-03",
+      "due_date": null,
+      "buyer_name": "Luna Cafe Pty Ltd",
+      "buyer_abn": "51 824 753 556",
+      "subtotal": "500.00",
+      "gst": "50.00",
+      "total": "550.00",
+      "currency": "AUD",
+      "line_items": [
+        {
+          "description": "Cleaning crew after-hours service",
+          "quantity": "1.00",
+          "unit_price": "500.00",
+          "amount": "500.00",
+          "gst_amount": "50.00",
+          "tax_treatment": "GST"
+        }
+      ]
+    }
+  },
+  {
+    "name": "messy_spacing_table_items",
+    "expected_status": "ready",
+    "text": "TAX  INVOICE\nBright Linen Co Pty Ltd\nABN: 51 824 753 556\nInvoice No. BLC-310\nInvoice Date: 7 May 2026\nBill To: Luna Cafe Pty Ltd\nLine Items:\nDescription        Qty      Unit      GST      Line\nTea towels         6        $20.00    $12.00   $120.00\nAprons             4        $20.00    $8.00    $80.00\nSub total          $200.00\nTotal GST          $20.00\nTotal inc GST      $220.00",
+    "expected": {
+      "supplier_name": "Bright Linen Co Pty Ltd",
+      "supplier_abn": "51 824 753 556",
+      "invoice_number": "BLC-310",
+      "invoice_date": "2026-05-07",
+      "due_date": null,
+      "buyer_name": "Luna Cafe Pty Ltd",
+      "buyer_abn": null,
+      "subtotal": "200.00",
+      "gst": "20.00",
+      "total": "220.00",
+      "currency": "AUD",
+      "line_items": [
+        {
+          "description": "Tea towels",
+          "quantity": "6.00",
+          "unit_price": "20.00",
+          "amount": "120.00",
+          "gst_amount": "12.00",
+          "tax_treatment": "GST"
+        },
+        {
+          "description": "Aprons",
+          "quantity": "4.00",
+          "unit_price": "20.00",
+          "amount": "80.00",
+          "gst_amount": "8.00",
+          "tax_treatment": "GST"
+        }
+      ]
+    }
+  },
+  {
+    "name": "fixed_width_line_items",
+    "expected_status": "ready",
+    "text": "Kinetic Maintenance Pty Ltd\nAustralian Business Number 53 004 085 616\nTAX INVOICE KM-9902\nDate: 2026/05/11\nCustomer: Luna Cafe Pty Ltd\nITEM                         QTY     PRICE       GST       AMOUNT\nPreventive machine service     1     500.00     50.00      500.00\nReplacement seal kit           2     100.00     20.00      200.00\nNet Amount: 700.00\nGST on taxable supply: 70.00\nGrand Total: 770.00\nBSB 000-111 Account 123456 Payment limit $5,000.00",
+    "expected": {
+      "supplier_name": "Kinetic Maintenance Pty Ltd",
+      "supplier_abn": "53 004 085 616",
+      "invoice_number": "KM-9902",
+      "invoice_date": "2026-05-11",
+      "due_date": null,
+      "buyer_name": "Luna Cafe Pty Ltd",
+      "buyer_abn": null,
+      "subtotal": "700.00",
+      "gst": "70.00",
+      "total": "770.00",
+      "currency": "AUD",
+      "line_items": [
+        {
+          "description": "Preventive machine service",
+          "quantity": "1.00",
+          "unit_price": "500.00",
+          "amount": "500.00",
+          "gst_amount": "50.00",
+          "tax_treatment": "GST"
+        },
+        {
+          "description": "Replacement seal kit",
+          "quantity": "2.00",
+          "unit_price": "100.00",
+          "amount": "200.00",
+          "gst_amount": "20.00",
+          "tax_treatment": "GST"
+        }
+      ]
+    }
+  },
+  {
+    "name": "missing_due_date",
+    "expected_status": "ready",
+    "text": "Tax Invoice\nPaper Trail Stationery Pty Ltd\nABN 51 824 753 556\nInvoice Number: PTS-2026-88\nInvoice Date: 12 May 2026\nBuyer: Luna Cafe Pty Ltd\nPrinter paper cartons $90.00\nSubtotal: $90.00\nGST: $9.00\nTotal payable: $99.00\nNo due date shown; pay under account terms.",
+    "expected": {
+      "supplier_name": "Paper Trail Stationery Pty Ltd",
+      "supplier_abn": "51 824 753 556",
+      "invoice_number": "PTS-2026-88",
+      "invoice_date": "2026-05-12",
+      "due_date": null,
+      "buyer_name": "Luna Cafe Pty Ltd",
+      "buyer_abn": null,
+      "subtotal": "90.00",
+      "gst": "9.00",
+      "total": "99.00",
+      "currency": "AUD",
+      "line_items": [
+        {
+          "description": "Printer paper cartons",
+          "quantity": "1.00",
+          "unit_price": "90.00",
+          "amount": "90.00",
+          "gst_amount": "9.00",
+          "tax_treatment": "GST"
+        }
+      ]
+    }
+  },
+  {
+    "name": "missing_buyer_abn_under_1000",
+    "expected_status": "ready",
+    "text": "Harbour Waste Services Pty Ltd\nABN: 53 004 085 616\nInvoice # HWS-701\nDate: 13-05-2026\nBilled To Luna Cafe Pty Ltd\nCommercial bin collection\nAmount ex GST $400.00\nGST $40.00\nBalance Due $440.00\nDirect debit amount next month $440.00",
+    "expected": {
+      "supplier_name": "Harbour Waste Services Pty Ltd",
+      "supplier_abn": "53 004 085 616",
+      "invoice_number": "HWS-701",
+      "invoice_date": "2026-05-13",
+      "due_date": null,
+      "buyer_name": "Luna Cafe Pty Ltd",
+      "buyer_abn": null,
+      "subtotal": "400.00",
+      "gst": "40.00",
+      "total": "440.00",
+      "currency": "AUD",
+      "line_items": [
+        {
+          "description": "Commercial bin collection",
+          "quantity": "1.00",
+          "unit_price": "400.00",
+          "amount": "400.00",
+          "gst_amount": "40.00",
+          "tax_treatment": "GST"
+        }
+      ]
+    }
+  },
+  {
+    "name": "over_1000_missing_buyer",
+    "expected_status": "needs_review",
+    "text": "Tax Invoice\nCity Refrigeration Works Pty Ltd\nABN 51 824 753 556\nInvoice CRW-4200\nDate: 14 May 2026\nEmergency coolroom repair\nSubtotal $1,200.00\nGST $120.00\nTotal $1,320.00\nTechnician float $80.00\nNo buyer details printed on this copy.",
+    "expected": {
+      "supplier_name": "City Refrigeration Works Pty Ltd",
+      "supplier_abn": "51 824 753 556",
+      "invoice_number": "CRW-4200",
+      "invoice_date": "2026-05-14",
+      "due_date": null,
+      "buyer_name": null,
+      "buyer_abn": null,
+      "subtotal": "1200.00",
+      "gst": "120.00",
+      "total": "1320.00",
+      "currency": "AUD",
+      "line_items": [
+        {
+          "description": "Emergency coolroom repair",
+          "quantity": "1.00",
+          "unit_price": "1200.00",
+          "amount": "1200.00",
+          "gst_amount": "120.00",
+          "tax_treatment": "GST"
+        }
+      ]
+    }
+  },
+  {
+    "name": "small_receipt_under_82_50",
+    "expected_status": "ready",
+    "text": "Receipt / Tax Invoice\nCorner Hardware Pty Ltd\nSale CH-44\nDate 15/05/2026\nMasking tape and screws\nTotal includes GST: $24.20\nGST included in total: $2.20\nEFTPOS approved amount $24.20\nABN not printed on small receipt copy.",
+    "expected": {
+      "supplier_name": "Corner Hardware Pty Ltd",
+      "supplier_abn": null,
+      "invoice_number": "CH-44",
+      "invoice_date": "2026-05-15",
+      "due_date": null,
+      "buyer_name": null,
+      "buyer_abn": null,
+      "subtotal": "22.00",
+      "gst": "2.20",
+      "total": "24.20",
+      "currency": "AUD",
+      "line_items": [
+        {
+          "description": "Masking tape and screws",
+          "quantity": "1.00",
+          "unit_price": "22.00",
+          "amount": "22.00",
+          "gst_amount": "2.20",
+          "tax_treatment": "GST"
+        }
+      ]
+    }
+  },
+  {
+    "name": "gst_inclusive_wording_no_gst_line",
+    "expected_status": "ready",
+    "text": "TAX INVOICE\nUrban Milk Supply Pty Ltd\nABN 53 004 085 616\nInv No UMS-818\nDate issued 16 May 2026\nBill To: Luna Cafe Pty Ltd\nMilk delivery for May\nAll prices are GST inclusive. Total amount payable AUD $242.00\nNo other tax or delivery fees apply.",
+    "expected": {
+      "supplier_name": "Urban Milk Supply Pty Ltd",
+      "supplier_abn": "53 004 085 616",
+      "invoice_number": "UMS-818",
+      "invoice_date": "2026-05-16",
+      "due_date": null,
+      "buyer_name": "Luna Cafe Pty Ltd",
+      "buyer_abn": null,
+      "subtotal": "220.00",
+      "gst": "22.00",
+      "total": "242.00",
+      "currency": "AUD",
+      "line_items": [
+        {
+          "description": "Milk delivery for May",
+          "quantity": "1.00",
+          "unit_price": "220.00",
+          "amount": "220.00",
+          "gst_amount": "22.00",
+          "tax_treatment": "GST"
+        }
+      ]
+    }
+  },
+  {
+    "name": "mixed_taxable_gst_free",
+    "expected_status": "ready",
+    "text": "Green Market Wholesalers Pty Ltd\nABN 51 824 753 556\nTax Invoice GMW-620\nDate: 17 May 2026\nBuyer: Luna Cafe Pty Ltd\nLine Items:\nCoffee syrups | 1 | 100.00 | 100.00 | 10.00 | GST\nFresh apples | 1 | 60.00 | 60.00 | 0.00 | GST-free\nSubtotal $160.00\nGST payable $10.00\nInvoice total $170.00\nThis invoice contains taxable and GST-free food items.",
+    "expected": {
+      "supplier_name": "Green Market Wholesalers Pty Ltd",
+      "supplier_abn": "51 824 753 556",
+      "invoice_number": "GMW-620",
+      "invoice_date": "2026-05-17",
+      "due_date": null,
+      "buyer_name": "Luna Cafe Pty Ltd",
+      "buyer_abn": null,
+      "subtotal": "160.00",
+      "gst": "10.00",
+      "total": "170.00",
+      "currency": "AUD",
+      "line_items": [
+        {
+          "description": "Coffee syrups",
+          "quantity": "1.00",
+          "unit_price": "100.00",
+          "amount": "100.00",
+          "gst_amount": "10.00",
+          "tax_treatment": "GST"
+        },
+        {
+          "description": "Fresh apples",
+          "quantity": "1.00",
+          "unit_price": "60.00",
+          "amount": "60.00",
+          "gst_amount": "0.00",
+          "tax_treatment": "GST_FREE"
+        }
+      ]
+    }
+  },
+  {
+    "name": "ocr_character_noise",
+    "expected_status": "ready",
+    "text": "TAX 1NVOICE\nR0astery Equip Repairs Pty Ltd\nA8N: 51 824 753 556\nInvoice N0: RER-5O1\nDate: 18/05/2026\n8ill To: Luna Cafe Pty Ltd\nGroup head gasket service\nSubt0tal $275.00\nG5T $27.50\nT0tal due $302.50\nCard auth amount $302.50",
+    "expected": {
+      "supplier_name": "Roastery Equip Repairs Pty Ltd",
+      "supplier_abn": "51 824 753 556",
+      "invoice_number": "RER-501",
+      "invoice_date": "2026-05-18",
+      "due_date": null,
+      "buyer_name": "Luna Cafe Pty Ltd",
+      "buyer_abn": null,
+      "subtotal": "275.00",
+      "gst": "27.50",
+      "total": "302.50",
+      "currency": "AUD",
+      "line_items": [
+        {
+          "description": "Group head gasket service",
+          "quantity": "1.00",
+          "unit_price": "275.00",
+          "amount": "275.00",
+          "gst_amount": "27.50",
+          "tax_treatment": "GST"
+        }
+      ]
+    }
+  },
+  {
+    "name": "duplicate_reference_a",
+    "expected_status": "ready",
+    "text": "Tax Invoice\nDocket Freight Pty Ltd\nABN 53 004 085 616\nInvoice Number DUP-901\nDate 19 May 2026\nBill To: Luna Cafe Pty Ltd\nCourier service\nSubtotal $100.00\nGST $10.00\nTotal $110.00\nBank reference DUP-901",
+    "expected": {
+      "supplier_name": "Docket Freight Pty Ltd",
+      "supplier_abn": "53 004 085 616",
+      "invoice_number": "DUP-901",
+      "invoice_date": "2026-05-19",
+      "due_date": null,
+      "buyer_name": "Luna Cafe Pty Ltd",
+      "buyer_abn": null,
+      "subtotal": "100.00",
+      "gst": "10.00",
+      "total": "110.00",
+      "currency": "AUD",
+      "line_items": [
+        {
+          "description": "Courier service",
+          "quantity": "1.00",
+          "unit_price": "100.00",
+          "amount": "100.00",
+          "gst_amount": "10.00",
+          "tax_treatment": "GST"
+        }
+      ]
+    }
+  },
+  {
+    "name": "duplicate_reference_b",
+    "expected_status": "needs_review",
+    "text": "Docket Freight Pty Ltd\nABN 53 004 085 616\nTAX INVOICE\nInvoice ref DUP-901\nInvoice date 19 May 2026\nCustomer Luna Cafe Pty Ltd\nCourier service duplicate copy\nSubtotal $100.00\nGST $10.00\nTotal payable $110.00\nStatement balance $440.00",
+    "expected": {
+      "supplier_name": "Docket Freight Pty Ltd",
+      "supplier_abn": "53 004 085 616",
+      "invoice_number": "DUP-901",
+      "invoice_date": "2026-05-19",
+      "due_date": null,
+      "buyer_name": "Luna Cafe Pty Ltd",
+      "buyer_abn": null,
+      "subtotal": "100.00",
+      "gst": "10.00",
+      "total": "110.00",
+      "currency": "AUD",
+      "line_items": [
+        {
+          "description": "Courier service duplicate copy",
+          "quantity": "1.00",
+          "unit_price": "100.00",
+          "amount": "100.00",
+          "gst_amount": "10.00",
+          "tax_treatment": "GST"
+        }
+      ]
+    }
+  },
+  {
+    "name": "weird_valid_date_formats",
+    "expected_status": "ready",
+    "text": "Tax Invoice\nLate Night Security Pty Ltd\nABN 51 824 753 556\nInvoice ID LNS/2026/05\nInvoice Date 31 May 26\nDue 14 Jun 26\nBill To Luna Cafe Pty Ltd\nAlarm callout\nSubtotal AUD 150.00\nGST AUD 15.00\nTotal AUD 165.00",
+    "expected": {
+      "supplier_name": "Late Night Security Pty Ltd",
+      "supplier_abn": "51 824 753 556",
+      "invoice_number": "LNS/2026/05",
+      "invoice_date": "2026-05-31",
+      "due_date": "2026-06-14",
+      "buyer_name": "Luna Cafe Pty Ltd",
+      "buyer_abn": null,
+      "subtotal": "150.00",
+      "gst": "15.00",
+      "total": "165.00",
+      "currency": "AUD",
+      "line_items": [
+        {
+          "description": "Alarm callout",
+          "quantity": "1.00",
+          "unit_price": "150.00",
+          "amount": "150.00",
+          "gst_amount": "15.00",
+          "tax_treatment": "GST"
+        }
+      ]
+    }
+  },
+  {
+    "name": "extra_bank_payment_text",
+    "expected_status": "ready",
+    "text": "Swan POS Support Pty Ltd\nABN 53 004 085 616\nTax Invoice SPS-3321\nDate: 20 May 2026\nBuyer: Luna Cafe Pty Ltd\nMonthly POS support\nSubtotal: $350.00\nGST: $35.00\nTotal due now: $385.00\nBank: $0.00 transfer fee if paid by EFT\nMinimum card payment $5.00\nPrevious credit $12.00 already applied",
+    "expected": {
+      "supplier_name": "Swan POS Support Pty Ltd",
+      "supplier_abn": "53 004 085 616",
+      "invoice_number": "SPS-3321",
+      "invoice_date": "2026-05-20",
+      "due_date": null,
+      "buyer_name": "Luna Cafe Pty Ltd",
+      "buyer_abn": null,
+      "subtotal": "350.00",
+      "gst": "35.00",
+      "total": "385.00",
+      "currency": "AUD",
+      "line_items": [
+        {
+          "description": "Monthly POS support",
+          "quantity": "1.00",
+          "unit_price": "350.00",
+          "amount": "350.00",
+          "gst_amount": "35.00",
+          "tax_treatment": "GST"
+        }
+      ]
+    }
+  },
+  {
+    "name": "multiple_non_total_amounts",
+    "expected_status": "ready",
+    "text": "Tax Invoice\nBlue Bay Laundry Pty Ltd\nABN 51 824 753 556\nInvoice BBL-78\nDate: 21 May 2026\nBill To: Luna Cafe Pty Ltd\nLinen wash service\nQuote accepted $300.00\nDeposit paid $50.00\nDelivery estimate $18.00\nSubtotal $110.00\nGST $11.00\nInvoice Total $121.00\nAmount previously charged on card $0.00",
+    "expected": {
+      "supplier_name": "Blue Bay Laundry Pty Ltd",
+      "supplier_abn": "51 824 753 556",
+      "invoice_number": "BBL-78",
+      "invoice_date": "2026-05-21",
+      "due_date": null,
+      "buyer_name": "Luna Cafe Pty Ltd",
+      "buyer_abn": null,
+      "subtotal": "110.00",
+      "gst": "11.00",
+      "total": "121.00",
+      "currency": "AUD",
+      "line_items": [
+        {
+          "description": "Linen wash service",
+          "quantity": "1.00",
+          "unit_price": "110.00",
+          "amount": "110.00",
+          "gst_amount": "11.00",
+          "tax_treatment": "GST"
+        }
+      ]
+    }
+  }
+]

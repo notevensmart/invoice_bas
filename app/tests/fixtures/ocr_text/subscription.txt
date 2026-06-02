@@ -1,0 +1,13 @@
+Tax Invoice
+Supplier: WebHost Cloud Services Pty Ltd
+Supplier ABN: 53 004 085 616
+Invoice Number: WH-2026-05
+Invoice Date: 2026-05-01
+Due Date: 2026-05-15
+Buyer: Luna Cafe Pty Ltd
+Subtotal: $90.00
+GST: $9.00
+Total: $99.00
+Currency: AUD
+Line Items:
+Hosting subscription | 1 | 90.00 | 90.00 | 9.00

@@ -1,15 +1,12 @@
-from fastapi import FastAPI, UploadFile, File, Form
-import asyncio
-from fastapi.middleware.cors import CORSMiddleware
-from app.ocr import OCRService
-from app.agent import ChatBASAgent
-from app.batch_processor import process_batch_invoices_sync
-from fastapi.responses import JSONResponse
-from typing import List
+from __future__ import annotations
 
-app = FastAPI(title="Smart BAS Conversational Agent")
-ocr_service = OCRService()
-chat_agent = ChatBASAgent()
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from app.api.routes import router
+
+
+app = FastAPI(title="Invoice Automation POC")
 
 app.add_middleware(
     CORSMiddleware,
@@ -18,43 +15,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-@app.post("/chat")
-async def chat_with_bas_agent(
-    message: str = Form(...),
-    file: UploadFile = File(None)
-):
-    """
-    Chat with the BAS agent.
-    - If a file is uploaded, runs invoice reasoning (graph mode).
-    - Otherwise, handles conversational Q&A (chat mode).
-    """
-    try:
-        mode = "chat"   # default: conversational
-        text = message.strip()
 
-        # --- Invoice reasoning if file uploaded ---
-        if file:
-            content = await file.read()
-            extracted = await asyncio.to_thread(ocr_service.extract_text, content)
-            text += f"\n\n{extracted.strip()}"
-            mode = "invoice"
+app.include_router(router)
 
-        # --- Run the agent with correct mode ---
-        result = chat_agent.run(text, mode=mode)
 
-        # --- Wrap for response ---
-        return JSONResponse(content=result, status_code=200)
+@app.get("/health")
+async def health() -> dict[str, str]:
+    return {"status": "ok"}
 
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return JSONResponse(
-            content={"error": str(e)},
-            status_code=500,
-        )
-@ app.post("/process-batch")
-async def process_batch(files: List[UploadFile] = File(...)):
-    return process_batch_invoices_sync(files)
-       
-# Required for Vercel / Railway handlers
+
 handler = app

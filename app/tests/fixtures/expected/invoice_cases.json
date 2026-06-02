@@ -1,0 +1,120 @@
+{
+  "clean_under_1000": {
+    "status": "ready",
+    "issue_codes": [],
+    "supplier_name": "Metro Coffee Roasters Pty Ltd",
+    "supplier_abn": "51 824 753 556",
+    "invoice_number": "MCR-1001",
+    "subtotal": "300.00",
+    "gst": "30.00",
+    "total": "330.00",
+    "currency": "AUD",
+    "account_code": "310"
+  },
+  "clean_over_1000": {
+    "status": "ready",
+    "issue_codes": [],
+    "supplier_name": "City Utilities Pty Ltd",
+    "supplier_abn": "53 004 085 616",
+    "invoice_number": "CU-2207",
+    "subtotal": "1000.00",
+    "gst": "100.00",
+    "total": "1100.00",
+    "currency": "AUD",
+    "account_code": "445"
+  },
+  "small_receipt": {
+    "status": "ready",
+    "issue_codes": [],
+    "account_code": "429"
+  },
+  "small_receipt_missing_abn": {
+    "status": "ready",
+    "issue_codes": [],
+    "supplier_abn": null,
+    "account_code": "429"
+  },
+  "clear_line_items": {
+    "status": "ready",
+    "issue_codes": [],
+    "line_item_count": 2,
+    "account_code": "310"
+  },
+  "messy_fallback": {
+    "status": "ready",
+    "issue_codes": [],
+    "line_items_source": "fallback_single_line",
+    "account_code": "310"
+  },
+  "officeworks": {
+    "status": "ready",
+    "issue_codes": [],
+    "account_code": "453"
+  },
+  "cleaning": {
+    "status": "ready",
+    "issue_codes": [],
+    "account_code": "429"
+  },
+  "produce": {
+    "status": "ready",
+    "issue_codes": [],
+    "account_code": "310"
+  },
+  "subscription": {
+    "status": "ready",
+    "issue_codes": [],
+    "account_code": "485"
+  },
+  "unmapped_ready": {
+    "status": "ready",
+    "issue_codes": [],
+    "account_code": "UNMAPPED"
+  },
+  "missing_abn": {
+    "status": "needs_review",
+    "issue_codes": ["MISSING_SUPPLIER_ABN"]
+  },
+  "invalid_abn": {
+    "status": "needs_review",
+    "issue_codes": ["INVALID_ABN"],
+    "correction": {
+      "field": "supplier_abn",
+      "value": "51 824 753 556",
+      "after_status": "ready"
+    }
+  },
+  "gst_not_shown": {
+    "status": "needs_review",
+    "issue_codes": ["MISSING_GST"]
+  },
+  "over_1000_missing_buyer": {
+    "status": "needs_review",
+    "issue_codes": ["MISSING_BUYER_FOR_OVER_1000"]
+  },
+  "subtotal_mismatch": {
+    "status": "failed",
+    "issue_codes": ["GST_TOTAL_MISMATCH"]
+  },
+  "line_item_mismatch": {
+    "status": "failed",
+    "issue_codes": ["LINE_ITEMS_TOTAL_MISMATCH"]
+  },
+  "unsupported_currency": {
+    "status": "needs_review",
+    "issue_codes": ["UNSUPPORTED_CURRENCY"]
+  },
+  "missing_invoice_number": {
+    "status": "needs_review",
+    "issue_codes": ["MISSING_INVOICE_NUMBER"]
+  },
+  "poor_ocr": {
+    "status": "failed",
+    "issue_codes": ["PARSER_SCHEMA_INVALID"]
+  },
+  "duplicate_pair": {
+    "first_status": "ready",
+    "second_status": "needs_review",
+    "second_issue_codes": ["DUPLICATE_INVOICE"]
+  }
+}

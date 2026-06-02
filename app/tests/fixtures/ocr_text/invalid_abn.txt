@@ -1,0 +1,13 @@
+Tax Invoice
+Supplier: Metro Coffee Roasters Pty Ltd
+Supplier ABN: 12 345 678 901
+Invoice Number: MCR-1003
+Invoice Date: 2026-05-15
+Due Date: 2026-06-15
+Buyer: Luna Cafe Pty Ltd
+Subtotal: $300.00
+GST: $30.00
+Total: $330.00
+Currency: AUD
+Line Items:
+Coffee beans | 3 | 100.00 | 300.00 | 30.00

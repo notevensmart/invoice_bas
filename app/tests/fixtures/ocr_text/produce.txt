@@ -1,0 +1,13 @@
+Tax Invoice
+Supplier: Fresh Farms Produce Pty Ltd
+Supplier ABN: 12 004 044 937
+Invoice Number: FF-3402
+Invoice Date: 2026-05-16
+Due Date: 2026-05-30
+Buyer: Luna Cafe Pty Ltd
+Subtotal: $140.00
+GST: $14.00
+Total: $154.00
+Currency: AUD
+Line Items:
+Seasonal produce | 1 | 140.00 | 140.00 | 14.00

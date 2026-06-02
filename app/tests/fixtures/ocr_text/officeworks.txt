@@ -1,0 +1,13 @@
+Tax Invoice
+Supplier: Officeworks Business Direct
+Supplier ABN: 51 824 753 556
+Invoice Number: OW-9088
+Invoice Date: 2026-05-22
+Due Date: 2026-06-06
+Buyer: Luna Cafe Pty Ltd
+Subtotal: $180.00
+GST: $18.00
+Total: $198.00
+Currency: AUD
+Line Items:
+Printer paper | 10 | 18.00 | 180.00 | 18.00

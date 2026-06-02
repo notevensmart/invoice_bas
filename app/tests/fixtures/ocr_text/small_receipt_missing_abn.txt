@@ -1,0 +1,10 @@
+Receipt
+Supplier: Sparkle Cleaning Supplies Pty Ltd
+Invoice Number: SP-0082
+Invoice Date: 2026-05-04
+Subtotal: $50.00
+GST: $5.00
+Total: $55.00
+Currency: AUD
+Line Items:
+Sanitiser | 1 | 50.00 | 50.00 | 5.00

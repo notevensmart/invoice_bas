@@ -1,0 +1,920 @@
+[
+  {
+    "label": "baseline_legacy_llm",
+    "timestamp": "2026-06-02T09:00:27.863274+00:00",
+    "llm_enabled": true,
+    "model": "llama-3.1-8b-instant",
+    "prompt_version": "legacy",
+    "cases": 16,
+    "field_accuracy": {
+      "supplier_name": {
+        "correct": 15,
+        "total": 16,
+        "accuracy": 0.9375
+      },
+      "supplier_abn": {
+        "correct": 16,
+        "total": 16,
+        "accuracy": 1.0
+      },
+      "invoice_number": {
+        "correct": 15,
+        "total": 16,
+        "accuracy": 0.9375
+      },
+      "invoice_date": {
+        "correct": 15,
+        "total": 16,
+        "accuracy": 0.9375
+      },
+      "due_date": {
+        "correct": 16,
+        "total": 16,
+        "accuracy": 1.0
+      },
+      "buyer_name": {
+        "correct": 16,
+        "total": 16,
+        "accuracy": 1.0
+      },
+      "buyer_abn": {
+        "correct": 16,
+        "total": 16,
+        "accuracy": 1.0
+      },
+      "subtotal": {
+        "correct": 15,
+        "total": 16,
+        "accuracy": 0.9375
+      },
+      "gst": {
+        "correct": 15,
+        "total": 16,
+        "accuracy": 0.9375
+      },
+      "total": {
+        "correct": 16,
+        "total": 16,
+        "accuracy": 1.0
+      },
+      "currency": {
+        "correct": 16,
+        "total": 16,
+        "accuracy": 1.0
+      }
+    },
+    "status_accuracy": 0.75,
+    "line_items_accuracy": 0.25,
+    "false_ready": 0,
+    "review_rate": 0.125,
+    "parser_failures": 0,
+    "llm_calls": 16,
+    "legacy_prompt": true,
+    "case_results": [
+      {
+        "name": "unusual_total_labels_gst_inclusive",
+        "expected_status": "ready",
+        "actual_status": "ready",
+        "field_matches": {
+          "supplier_name": true,
+          "supplier_abn": true,
+          "invoice_number": true,
+          "invoice_date": true,
+          "due_date": true,
+          "buyer_name": true,
+          "buyer_abn": true,
+          "subtotal": true,
+          "gst": true,
+          "total": true,
+          "currency": true
+        },
+        "line_items_match": false,
+        "issues": [],
+        "sources": {
+          "parser": 15
+        }
+      },
+      {
+        "name": "supplier_buyer_abns_close",
+        "expected_status": "ready",
+        "actual_status": "failed",
+        "field_matches": {
+          "supplier_name": true,
+          "supplier_abn": true,
+          "invoice_number": true,
+          "invoice_date": true,
+          "due_date": true,
+          "buyer_name": true,
+          "buyer_abn": true,
+          "subtotal": true,
+          "gst": true,
+          "total": true,
+          "currency": true
+        },
+        "line_items_match": false,
+        "issues": [
+          "LINE_ITEMS_TOTAL_MISMATCH"
+        ],
+        "sources": {
+          "parser": 15
+        }
+      },
+      {
+        "name": "messy_spacing_table_items",
+        "expected_status": "ready",
+        "actual_status": "ready",
+        "field_matches": {
+          "supplier_name": true,
+          "supplier_abn": true,
+          "invoice_number": true,
+          "invoice_date": true,
+          "due_date": true,
+          "buyer_name": true,
+          "buyer_abn": true,
+          "subtotal": true,
+          "gst": true,
+          "total": true,
+          "currency": true
+        },
+        "line_items_match": true,
+        "issues": [],
+        "sources": {
+          "parser": 15
+        }
+      },
+      {
+        "name": "fixed_width_line_items",
+        "expected_status": "ready",
+        "actual_status": "ready",
+        "field_matches": {
+          "supplier_name": true,
+          "supplier_abn": true,
+          "invoice_number": true,
+          "invoice_date": true,
+          "due_date": true,
+          "buyer_name": true,
+          "buyer_abn": true,
+          "subtotal": true,
+          "gst": true,
+          "total": true,
+          "currency": true
+        },
+        "line_items_match": true,
+        "issues": [],
+        "sources": {
+          "parser": 15
+        }
+      },
+      {
+        "name": "missing_due_date",
+        "expected_status": "ready",
+        "actual_status": "ready",
+        "field_matches": {
+          "supplier_name": true,
+          "supplier_abn": true,
+          "invoice_number": true,
+          "invoice_date": true,
+          "due_date": true,
+          "buyer_name": true,
+          "buyer_abn": true,
+          "subtotal": true,
+          "gst": true,
+          "total": true,
+          "currency": true
+        },
+        "line_items_match": true,
+        "issues": [],
+        "sources": {
+          "parser": 14
+        }
+      },
+      {
+        "name": "missing_buyer_abn_under_1000",
+        "expected_status": "ready",
+        "actual_status": "ready",
+        "field_matches": {
+          "supplier_name": true,
+          "supplier_abn": true,
+          "invoice_number": true,
+          "invoice_date": false,
+          "due_date": true,
+          "buyer_name": true,
+          "buyer_abn": true,
+          "subtotal": true,
+          "gst": true,
+          "total": true,
+          "currency": true
+        },
+        "line_items_match": false,
+        "issues": [],
+        "sources": {
+          "parser": 14
+        }
+      },
+      {
+        "name": "over_1000_missing_buyer",
+        "expected_status": "needs_review",
+        "actual_status": "failed",
+        "field_matches": {
+          "supplier_name": true,
+          "supplier_abn": true,
+          "invoice_number": true,
+          "invoice_date": true,
+          "due_date": true,
+          "buyer_name": true,
+          "buyer_abn": true,
+          "subtotal": true,
+          "gst": true,
+          "total": true,
+          "currency": true
+        },
+        "line_items_match": false,
+        "issues": [
+          "MISSING_BUYER_FOR_OVER_1000",
+          "LINE_ITEMS_TOTAL_MISMATCH"
+        ],
+        "sources": {
+          "parser": 14
+        }
+      },
+      {
+        "name": "small_receipt_under_82_50",
+        "expected_status": "ready",
+        "actual_status": "failed",
+        "field_matches": {
+          "supplier_name": true,
+          "supplier_abn": true,
+          "invoice_number": true,
+          "invoice_date": true,
+          "due_date": true,
+          "buyer_name": true,
+          "buyer_abn": true,
+          "subtotal": true,
+          "gst": true,
+          "total": true,
+          "currency": true
+        },
+        "line_items_match": false,
+        "issues": [
+          "LINE_ITEMS_TOTAL_MISMATCH"
+        ],
+        "sources": {
+          "parser": 12
+        }
+      },
+      {
+        "name": "gst_inclusive_wording_no_gst_line",
+        "expected_status": "ready",
+        "actual_status": "needs_review",
+        "field_matches": {
+          "supplier_name": true,
+          "supplier_abn": true,
+          "invoice_number": true,
+          "invoice_date": true,
+          "due_date": true,
+          "buyer_name": true,
+          "buyer_abn": true,
+          "subtotal": false,
+          "gst": false,
+          "total": true,
+          "currency": true
+        },
+        "line_items_match": false,
+        "issues": [
+          "MISSING_GST"
+        ],
+        "sources": {
+          "parser": 12
+        }
+      },
+      {
+        "name": "mixed_taxable_gst_free",
+        "expected_status": "ready",
+        "actual_status": "ready",
+        "field_matches": {
+          "supplier_name": true,
+          "supplier_abn": true,
+          "invoice_number": true,
+          "invoice_date": true,
+          "due_date": true,
+          "buyer_name": true,
+          "buyer_abn": true,
+          "subtotal": true,
+          "gst": true,
+          "total": true,
+          "currency": true
+        },
+        "line_items_match": true,
+        "issues": [],
+        "sources": {
+          "parser": 15
+        }
+      },
+      {
+        "name": "ocr_character_noise",
+        "expected_status": "ready",
+        "actual_status": "ready",
+        "field_matches": {
+          "supplier_name": false,
+          "supplier_abn": true,
+          "invoice_number": false,
+          "invoice_date": true,
+          "due_date": true,
+          "buyer_name": true,
+          "buyer_abn": true,
+          "subtotal": true,
+          "gst": true,
+          "total": true,
+          "currency": true
+        },
+        "line_items_match": false,
+        "issues": [],
+        "sources": {
+          "parser": 14
+        }
+      },
+      {
+        "name": "duplicate_reference_a",
+        "expected_status": "ready",
+        "actual_status": "ready",
+        "field_matches": {
+          "supplier_name": true,
+          "supplier_abn": true,
+          "invoice_number": true,
+          "invoice_date": true,
+          "due_date": true,
+          "buyer_name": true,
+          "buyer_abn": true,
+          "subtotal": true,
+          "gst": true,
+          "total": true,
+          "currency": true
+        },
+        "line_items_match": false,
+        "issues": [],
+        "sources": {
+          "fallback_single_line": 2,
+          "parser": 12
+        }
+      },
+      {
+        "name": "duplicate_reference_b",
+        "expected_status": "needs_review",
+        "actual_status": "needs_review",
+        "field_matches": {
+          "supplier_name": true,
+          "supplier_abn": true,
+          "invoice_number": true,
+          "invoice_date": true,
+          "due_date": true,
+          "buyer_name": true,
+          "buyer_abn": true,
+          "subtotal": true,
+          "gst": true,
+          "total": true,
+          "currency": true
+        },
+        "line_items_match": false,
+        "issues": [
+          "DUPLICATE_INVOICE"
+        ],
+        "sources": {
+          "fallback_single_line": 2,
+          "parser": 12
+        }
+      },
+      {
+        "name": "weird_valid_date_formats",
+        "expected_status": "ready",
+        "actual_status": "ready",
+        "field_matches": {
+          "supplier_name": true,
+          "supplier_abn": true,
+          "invoice_number": true,
+          "invoice_date": true,
+          "due_date": true,
+          "buyer_name": true,
+          "buyer_abn": true,
+          "subtotal": true,
+          "gst": true,
+          "total": true,
+          "currency": true
+        },
+        "line_items_match": false,
+        "issues": [],
+        "sources": {
+          "fallback_single_line": 2,
+          "parser": 13
+        }
+      },
+      {
+        "name": "extra_bank_payment_text",
+        "expected_status": "ready",
+        "actual_status": "ready",
+        "field_matches": {
+          "supplier_name": true,
+          "supplier_abn": true,
+          "invoice_number": true,
+          "invoice_date": true,
+          "due_date": true,
+          "buyer_name": true,
+          "buyer_abn": true,
+          "subtotal": true,
+          "gst": true,
+          "total": true,
+          "currency": true
+        },
+        "line_items_match": false,
+        "issues": [],
+        "sources": {
+          "fallback_single_line": 2,
+          "parser": 12
+        }
+      },
+      {
+        "name": "multiple_non_total_amounts",
+        "expected_status": "ready",
+        "actual_status": "ready",
+        "field_matches": {
+          "supplier_name": true,
+          "supplier_abn": true,
+          "invoice_number": true,
+          "invoice_date": true,
+          "due_date": true,
+          "buyer_name": true,
+          "buyer_abn": true,
+          "subtotal": true,
+          "gst": true,
+          "total": true,
+          "currency": true
+        },
+        "line_items_match": false,
+        "issues": [],
+        "sources": {
+          "fallback_single_line": 2,
+          "parser": 12
+        }
+      }
+    ]
+  },
+  {
+    "label": "after_improvements",
+    "timestamp": "2026-06-02T09:00:52.194595+00:00",
+    "llm_enabled": true,
+    "model": "llama-3.1-8b-instant",
+    "prompt_version": "2026-06-02-noisy-v2",
+    "cases": 16,
+    "field_accuracy": {
+      "supplier_name": {
+        "correct": 15,
+        "total": 16,
+        "accuracy": 0.9375
+      },
+      "supplier_abn": {
+        "correct": 16,
+        "total": 16,
+        "accuracy": 1.0
+      },
+      "invoice_number": {
+        "correct": 15,
+        "total": 16,
+        "accuracy": 0.9375
+      },
+      "invoice_date": {
+        "correct": 15,
+        "total": 16,
+        "accuracy": 0.9375
+      },
+      "due_date": {
+        "correct": 15,
+        "total": 16,
+        "accuracy": 0.9375
+      },
+      "buyer_name": {
+        "correct": 15,
+        "total": 16,
+        "accuracy": 0.9375
+      },
+      "buyer_abn": {
+        "correct": 15,
+        "total": 16,
+        "accuracy": 0.9375
+      },
+      "subtotal": {
+        "correct": 16,
+        "total": 16,
+        "accuracy": 1.0
+      },
+      "gst": {
+        "correct": 16,
+        "total": 16,
+        "accuracy": 1.0
+      },
+      "total": {
+        "correct": 16,
+        "total": 16,
+        "accuracy": 1.0
+      },
+      "currency": {
+        "correct": 16,
+        "total": 16,
+        "accuracy": 1.0
+      }
+    },
+    "status_accuracy": 1.0,
+    "line_items_accuracy": 0.8125,
+    "false_ready": 0,
+    "review_rate": 0.125,
+    "parser_failures": 0,
+    "llm_calls": 16,
+    "legacy_prompt": false,
+    "case_results": [
+      {
+        "name": "unusual_total_labels_gst_inclusive",
+        "expected_status": "ready",
+        "actual_status": "ready",
+        "field_matches": {
+          "supplier_name": true,
+          "supplier_abn": true,
+          "invoice_number": true,
+          "invoice_date": false,
+          "due_date": false,
+          "buyer_name": true,
+          "buyer_abn": true,
+          "subtotal": true,
+          "gst": true,
+          "total": true,
+          "currency": true
+        },
+        "line_items_match": false,
+        "issues": [],
+        "sources": {
+          "llm": 14
+        }
+      },
+      {
+        "name": "supplier_buyer_abns_close",
+        "expected_status": "ready",
+        "actual_status": "ready",
+        "field_matches": {
+          "supplier_name": true,
+          "supplier_abn": true,
+          "invoice_number": true,
+          "invoice_date": true,
+          "due_date": true,
+          "buyer_name": true,
+          "buyer_abn": true,
+          "subtotal": true,
+          "gst": true,
+          "total": true,
+          "currency": true
+        },
+        "line_items_match": false,
+        "issues": [],
+        "sources": {
+          "llm": 14
+        }
+      },
+      {
+        "name": "messy_spacing_table_items",
+        "expected_status": "ready",
+        "actual_status": "ready",
+        "field_matches": {
+          "supplier_name": true,
+          "supplier_abn": true,
+          "invoice_number": true,
+          "invoice_date": true,
+          "due_date": true,
+          "buyer_name": true,
+          "buyer_abn": true,
+          "subtotal": true,
+          "gst": true,
+          "total": true,
+          "currency": true
+        },
+        "line_items_match": true,
+        "issues": [],
+        "sources": {
+          "regex_rescue": 14
+        }
+      },
+      {
+        "name": "fixed_width_line_items",
+        "expected_status": "ready",
+        "actual_status": "ready",
+        "field_matches": {
+          "supplier_name": true,
+          "supplier_abn": true,
+          "invoice_number": true,
+          "invoice_date": true,
+          "due_date": true,
+          "buyer_name": true,
+          "buyer_abn": false,
+          "subtotal": true,
+          "gst": true,
+          "total": true,
+          "currency": true
+        },
+        "line_items_match": true,
+        "issues": [],
+        "sources": {
+          "regex_rescue": 15
+        }
+      },
+      {
+        "name": "missing_due_date",
+        "expected_status": "ready",
+        "actual_status": "ready",
+        "field_matches": {
+          "supplier_name": true,
+          "supplier_abn": true,
+          "invoice_number": true,
+          "invoice_date": true,
+          "due_date": true,
+          "buyer_name": true,
+          "buyer_abn": true,
+          "subtotal": true,
+          "gst": true,
+          "total": true,
+          "currency": true
+        },
+        "line_items_match": true,
+        "issues": [],
+        "sources": {
+          "fallback_single_line": 2,
+          "regex_rescue": 11
+        }
+      },
+      {
+        "name": "missing_buyer_abn_under_1000",
+        "expected_status": "ready",
+        "actual_status": "ready",
+        "field_matches": {
+          "supplier_name": true,
+          "supplier_abn": true,
+          "invoice_number": true,
+          "invoice_date": true,
+          "due_date": true,
+          "buyer_name": true,
+          "buyer_abn": true,
+          "subtotal": true,
+          "gst": true,
+          "total": true,
+          "currency": true
+        },
+        "line_items_match": true,
+        "issues": [],
+        "sources": {
+          "fallback_single_line": 2,
+          "regex_rescue": 11
+        }
+      },
+      {
+        "name": "over_1000_missing_buyer",
+        "expected_status": "needs_review",
+        "actual_status": "needs_review",
+        "field_matches": {
+          "supplier_name": true,
+          "supplier_abn": true,
+          "invoice_number": true,
+          "invoice_date": true,
+          "due_date": true,
+          "buyer_name": true,
+          "buyer_abn": true,
+          "subtotal": true,
+          "gst": true,
+          "total": true,
+          "currency": true
+        },
+        "line_items_match": true,
+        "issues": [
+          "MISSING_BUYER_FOR_OVER_1000"
+        ],
+        "sources": {
+          "fallback_single_line": 2,
+          "regex_rescue": 10
+        }
+      },
+      {
+        "name": "small_receipt_under_82_50",
+        "expected_status": "ready",
+        "actual_status": "ready",
+        "field_matches": {
+          "supplier_name": true,
+          "supplier_abn": true,
+          "invoice_number": true,
+          "invoice_date": true,
+          "due_date": true,
+          "buyer_name": true,
+          "buyer_abn": true,
+          "subtotal": true,
+          "gst": true,
+          "total": true,
+          "currency": true
+        },
+        "line_items_match": true,
+        "issues": [],
+        "sources": {
+          "derived_arithmetic": 1,
+          "fallback_single_line": 2,
+          "regex_rescue": 8
+        }
+      },
+      {
+        "name": "gst_inclusive_wording_no_gst_line",
+        "expected_status": "ready",
+        "actual_status": "ready",
+        "field_matches": {
+          "supplier_name": true,
+          "supplier_abn": true,
+          "invoice_number": true,
+          "invoice_date": true,
+          "due_date": true,
+          "buyer_name": true,
+          "buyer_abn": true,
+          "subtotal": true,
+          "gst": true,
+          "total": true,
+          "currency": true
+        },
+        "line_items_match": true,
+        "issues": [],
+        "sources": {
+          "derived_arithmetic": 2,
+          "fallback_single_line": 2,
+          "regex_rescue": 9
+        }
+      },
+      {
+        "name": "mixed_taxable_gst_free",
+        "expected_status": "ready",
+        "actual_status": "ready",
+        "field_matches": {
+          "supplier_name": true,
+          "supplier_abn": true,
+          "invoice_number": true,
+          "invoice_date": true,
+          "due_date": true,
+          "buyer_name": true,
+          "buyer_abn": true,
+          "subtotal": true,
+          "gst": true,
+          "total": true,
+          "currency": true
+        },
+        "line_items_match": true,
+        "issues": [],
+        "sources": {
+          "regex_rescue": 14
+        }
+      },
+      {
+        "name": "ocr_character_noise",
+        "expected_status": "ready",
+        "actual_status": "ready",
+        "field_matches": {
+          "supplier_name": false,
+          "supplier_abn": true,
+          "invoice_number": false,
+          "invoice_date": true,
+          "due_date": true,
+          "buyer_name": false,
+          "buyer_abn": true,
+          "subtotal": true,
+          "gst": true,
+          "total": true,
+          "currency": true
+        },
+        "line_items_match": false,
+        "issues": [],
+        "sources": {
+          "derived_arithmetic": 1,
+          "fallback_single_line": 2,
+          "regex_rescue": 9
+        }
+      },
+      {
+        "name": "duplicate_reference_a",
+        "expected_status": "ready",
+        "actual_status": "ready",
+        "field_matches": {
+          "supplier_name": true,
+          "supplier_abn": true,
+          "invoice_number": true,
+          "invoice_date": true,
+          "due_date": true,
+          "buyer_name": true,
+          "buyer_abn": true,
+          "subtotal": true,
+          "gst": true,
+          "total": true,
+          "currency": true
+        },
+        "line_items_match": true,
+        "issues": [],
+        "sources": {
+          "fallback_single_line": 2,
+          "regex_rescue": 11
+        }
+      },
+      {
+        "name": "duplicate_reference_b",
+        "expected_status": "needs_review",
+        "actual_status": "needs_review",
+        "field_matches": {
+          "supplier_name": true,
+          "supplier_abn": true,
+          "invoice_number": true,
+          "invoice_date": true,
+          "due_date": true,
+          "buyer_name": true,
+          "buyer_abn": true,
+          "subtotal": true,
+          "gst": true,
+          "total": true,
+          "currency": true
+        },
+        "line_items_match": true,
+        "issues": [
+          "DUPLICATE_INVOICE"
+        ],
+        "sources": {
+          "fallback_single_line": 2,
+          "regex_rescue": 11
+        }
+      },
+      {
+        "name": "weird_valid_date_formats",
+        "expected_status": "ready",
+        "actual_status": "ready",
+        "field_matches": {
+          "supplier_name": true,
+          "supplier_abn": true,
+          "invoice_number": true,
+          "invoice_date": true,
+          "due_date": true,
+          "buyer_name": true,
+          "buyer_abn": true,
+          "subtotal": true,
+          "gst": true,
+          "total": true,
+          "currency": true
+        },
+        "line_items_match": true,
+        "issues": [],
+        "sources": {
+          "fallback_single_line": 2,
+          "regex_rescue": 12
+        }
+      },
+      {
+        "name": "extra_bank_payment_text",
+        "expected_status": "ready",
+        "actual_status": "ready",
+        "field_matches": {
+          "supplier_name": true,
+          "supplier_abn": true,
+          "invoice_number": true,
+          "invoice_date": true,
+          "due_date": true,
+          "buyer_name": true,
+          "buyer_abn": true,
+          "subtotal": true,
+          "gst": true,
+          "total": true,
+          "currency": true
+        },
+        "line_items_match": true,
+        "issues": [],
+        "sources": {
+          "fallback_single_line": 2,
+          "regex_rescue": 11
+        }
+      },
+      {
+        "name": "multiple_non_total_amounts",
+        "expected_status": "ready",
+        "actual_status": "ready",
+        "field_matches": {
+          "supplier_name": true,
+          "supplier_abn": true,
+          "invoice_number": true,
+          "invoice_date": true,
+          "due_date": true,
+          "buyer_name": true,
+          "buyer_abn": true,
+          "subtotal": true,
+          "gst": true,
+          "total": true,
+          "currency": true
+        },
+        "line_items_match": true,
+        "issues": [],
+        "sources": {
+          "fallback_single_line": 2,
+          "regex_rescue": 11
+        }
+      }
+    ]
+  }
+]

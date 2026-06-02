@@ -1,0 +1,13 @@
+Tax Invoice
+Supplier: CleanPro Services Pty Ltd
+Supplier ABN: 33 051 775 556
+Invoice Number: CP-441
+Invoice Date: 2026-05-14
+Due Date: 2026-06-14
+Buyer: Luna Cafe Pty Ltd
+Subtotal: $220.00
+GST: $22.00
+Total: $242.00
+Currency: AUD
+Line Items:
+Cleaning service | 1 | 220.00 | 220.00 | 22.00

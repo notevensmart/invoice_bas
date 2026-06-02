@@ -1,0 +1,62 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>
+endobj
+4 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+5 0 obj
+<< /Length 416 >>
+stream
+BT
+/F1 9 Tf
+50 790 Td
+13 TL
+(Tax Invoice) Tj
+T*
+(Supplier: Harbour Repairs Pty Ltd) Tj
+T*
+(Supplier ABN: 49 004 028 077) Tj
+T*
+(Invoice Number: HR-555) Tj
+T*
+(Invoice Date: 2026-05-11) Tj
+T*
+(Due Date: 2026-06-11) Tj
+T*
+(Buyer: Luna Cafe Pty Ltd) Tj
+T*
+(Subtotal: $75.00) Tj
+T*
+(GST: $7.50) Tj
+T*
+(Total: $82.50) Tj
+T*
+(Currency: AUD) Tj
+T*
+(Line Items:) Tj
+T*
+(Door hinge repair | 1 | 75.00 | 75.00 | 7.50) Tj
+T*
+ET
+endstream
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000241 00000 n 
+0000000311 00000 n 
+trailer
+<< /Size 6 /Root 1 0 R >>
+startxref
+778
+%%EOF
