@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import json
 import os
 from html import escape
@@ -9,6 +10,7 @@ from typing import Any
 
 import requests
 import streamlit as st
+import streamlit.components.v1 as components
 
 
 API_BASE_URL = os.getenv("INVOICE_API_URL", "http://localhost:8000").rstrip("/")
@@ -254,6 +256,48 @@ def invoice_identity(result: dict[str, Any]) -> tuple[str, str, str]:
     return str(invoice_number), str(supplier), str(filename)
 
 
+def file_specs_from_uploads(files: list[Any]) -> list[dict[str, Any]]:
+    specs = []
+    for file in files:
+        specs.append(
+            {
+                "filename": file.name,
+                "content": file.read(),
+                "content_type": "application/pdf",
+            }
+        )
+    return specs
+
+
+def files_payload_from_specs(
+    specs: list[dict[str, Any]],
+    field_name: str,
+) -> list[tuple[str, tuple[str, bytes, str]]]:
+    return [
+        (
+            field_name,
+            (
+                spec["filename"],
+                spec["content"],
+                spec.get("content_type") or "application/pdf",
+            ),
+        )
+        for spec in specs
+    ]
+
+
+def store_pdf_previews(
+    results: list[dict[str, Any]],
+    specs: list[dict[str, Any]],
+) -> None:
+    previews = st.session_state.setdefault("pdf_previews", {})
+    for result, spec in zip(results, specs):
+        previews[result["document_id"]] = {
+            "filename": spec["filename"],
+            "content": spec["content"],
+        }
+
+
 def status_groups(results: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
     return {
         "ready": [result for result in results if result.get("status") == "ready"],
@@ -392,13 +436,15 @@ def render_detail(result: dict[str, Any]) -> None:
             unsafe_allow_html=True,
         )
 
-    fields_tab, edits_tab, payload_tab, explanation_tab = st.tabs(
-        ["Fields", "Review Edits", "Xero Payload", "Explanation"]
+    fields_tab, edits_tab, pdf_tab, payload_tab, explanation_tab = st.tabs(
+        ["Fields", "Review Edits", "Original PDF", "Xero Payload", "Explanation"]
     )
     with fields_tab:
         render_fields_table(result)
     with edits_tab:
         render_correction_form(result)
+    with pdf_tab:
+        render_original_pdf(result)
     with payload_tab:
         payload = result.get("xero_payload")
         if payload:
@@ -527,6 +573,36 @@ def render_correction_audit(result: dict[str, Any]) -> None:
     st.dataframe(rows, hide_index=True, use_container_width=True)
 
 
+def render_original_pdf(result: dict[str, Any]) -> None:
+    preview = st.session_state.get("pdf_previews", {}).get(result["document_id"])
+    if not preview:
+        st.info("Original PDF preview is available for files uploaded in this browser session.")
+        return
+
+    filename = preview["filename"]
+    content = preview["content"]
+    st.download_button(
+        "Download Original PDF",
+        data=content,
+        file_name=filename,
+        mime="application/pdf",
+        use_container_width=True,
+    )
+    encoded = base64.b64encode(content).decode("ascii")
+    components.html(
+        f"""
+        <iframe
+            src="data:application/pdf;base64,{encoded}"
+            width="100%"
+            height="720"
+            style="border: 1px solid #e4e7ec; border-radius: 8px;"
+        ></iframe>
+        """,
+        height=740,
+        scrolling=False,
+    )
+
+
 def render_batch_metrics(batch: dict[str, Any]) -> None:
     cols = st.columns(5)
     cols[0].metric("Uploaded", batch.get("uploaded", 0))
@@ -578,14 +654,20 @@ def system_status() -> dict[str, Any]:
         return {}
 
 
-def demo_batch_payload() -> list[tuple[str, tuple[str, bytes, str]]]:
+def demo_batch_specs() -> list[dict[str, Any]]:
     root = Path(__file__).resolve().parents[1] / "app" / "tests" / "fixtures" / "invoices"
-    payload = []
+    specs = []
     for filename in DEMO_BATCH_FILES:
         path = root / filename
         if path.exists():
-            payload.append(("files", (filename, path.read_bytes(), "application/pdf")))
-    return payload
+            specs.append(
+                {
+                    "filename": filename,
+                    "content": path.read_bytes(),
+                    "content_type": "application/pdf",
+                }
+            )
+    return specs
 
 
 def render_correction_form(result: dict[str, Any]) -> None:
@@ -697,12 +779,14 @@ with st.sidebar:
     st.markdown("### Demo")
     if st.button("Load demo batch", use_container_width=True):
         try:
-            payload = demo_batch_payload()
-            if not payload:
+            specs = demo_batch_specs()
+            if not specs:
                 st.error("Demo PDFs were not found in the repo.")
             else:
+                payload = files_payload_from_specs(specs, "files")
                 batch = api_post_files("/batches/process", payload)
                 st.session_state["last_batch"] = batch
+                store_pdf_previews(batch.get("results", []), specs)
                 prime_queue_selection(batch)
                 st.success("Demo batch processed.")
                 st.rerun()
@@ -716,6 +800,7 @@ with st.sidebar:
                 "last_batch",
                 "selected_document_id",
                 "selected_document_ids_by_status",
+                "pdf_previews",
             ):
                 st.session_state.pop(key, None)
             st.success("Demo data reset.")
@@ -745,14 +830,14 @@ with upload_tab:
                 st.warning("Upload at least one PDF.")
             else:
                 files = uploaded_files if isinstance(uploaded_files, list) else [uploaded_files]
-                payload = [
-                    ("files" if mode == "Batch PDFs" else "file", (file.name, file.read(), "application/pdf"))
-                    for file in files
-                ]
+                specs = file_specs_from_uploads(files)
+                field_name = "files" if mode == "Batch PDFs" else "file"
+                payload = files_payload_from_specs(specs, field_name)
                 try:
                     if mode == "Batch PDFs":
                         batch = api_post_files("/batches/process", payload)
                         st.session_state["last_batch"] = batch
+                        store_pdf_previews(batch.get("results", []), specs)
                         prime_queue_selection(batch)
                     else:
                         invoice = api_post_files("/invoices/process", payload)
@@ -765,6 +850,7 @@ with upload_tab:
                             "detected_gst_total": (invoice.get("extraction") or {}).get("gst") or "0.00",
                             "results": [invoice],
                         }
+                        store_pdf_previews([invoice], specs)
                         prime_queue_selection(st.session_state["last_batch"])
                     st.success("Processing complete.")
                 except Exception as exc:
