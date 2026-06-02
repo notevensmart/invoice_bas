@@ -48,6 +48,37 @@ FIELD_LABELS = {
     "currency": "Currency",
 }
 MONEY_FIELDS = {"subtotal", "gst", "total", "unit_price", "amount", "gst_amount"}
+SOURCE_LABELS = {
+    "llm": "AI extraction",
+    "regex_rescue": "Rule-based check",
+    "derived_arithmetic": "Calculated from totals",
+    "fallback_single_line": "Created summary line",
+    "user_correction": "Edited by user",
+    "parser": "Parser",
+}
+ISSUE_LABELS = {
+    "MISSING_SUPPLIER_NAME": "Supplier name is missing",
+    "MISSING_SUPPLIER_ABN": "Supplier ABN is missing",
+    "INVALID_ABN": "Supplier ABN needs checking",
+    "MISSING_INVOICE_NUMBER": "Invoice number is missing",
+    "MISSING_INVOICE_DATE": "Invoice date is missing",
+    "INVALID_INVOICE_DATE": "Invoice date needs checking",
+    "MISSING_TOTAL": "Invoice total is missing",
+    "MISSING_GST": "GST amount needs checking",
+    "GST_TOTAL_MISMATCH": "GST and total do not add up",
+    "LINE_ITEMS_TOTAL_MISMATCH": "Line items do not match the total",
+    "MISSING_BUYER_FOR_OVER_1000": "Buyer details are needed",
+    "DUPLICATE_INVOICE": "Possible duplicate invoice",
+    "UNSUPPORTED_CURRENCY": "Currency is not supported",
+    "OCR_EMPTY_TEXT": "PDF text could not be read",
+    "PARSER_INVALID_JSON": "Extraction could not be read",
+    "PARSER_SCHEMA_INVALID": "Extraction needs review",
+}
+PARSER_MODE_LABELS = {
+    "llm": "AI extraction active",
+    "deterministic": "Rule-based mode",
+    "unknown": "Unknown",
+}
 DEMO_BATCH_FILES = [
     "clean_under_1000.pdf",
     "clean_over_1000.pdf",
@@ -234,6 +265,61 @@ def field_display(field: str, value: Any) -> str:
     if field in MONEY_FIELDS:
         return money_display(value)
     return str(value)
+
+
+def title_text(value: Any) -> str:
+    text = str(value or "").replace("_", " ").replace("-", " ").strip()
+    return text.title() if text else "-"
+
+
+def source_display(source: Any) -> str:
+    return SOURCE_LABELS.get(str(source or ""), title_text(source))
+
+
+def confidence_display(confidence: Any) -> str:
+    text = str(confidence or "").strip().lower()
+    if not text:
+        return "Needs checking"
+    return {
+        "high": "High confidence",
+        "medium": "Medium confidence",
+        "low": "Low confidence",
+        "user": "User selected",
+    }.get(text, title_text(text))
+
+
+def parser_mode_display(mode: Any) -> str:
+    return PARSER_MODE_LABELS.get(str(mode or "unknown"), title_text(mode))
+
+
+def issue_title(code: Any) -> str:
+    return ISSUE_LABELS.get(str(code or ""), title_text(code))
+
+
+def account_reason_text(reason: Any) -> str:
+    text = str(reason or "").strip()
+    if not text:
+        return "No matching rule explanation was provided."
+    lower = text.lower()
+    if lower.startswith("matched supplier pattern:"):
+        remainder = text.split(":", 1)[1].strip()
+        supplier, _, explanation = remainder.partition(".")
+        if explanation.strip():
+            return (
+                f"Matched this supplier to a bookkeeping rule for {supplier.strip()}. "
+                f"{explanation.strip()}"
+            )
+        return f"Matched this supplier to a bookkeeping rule for {supplier.strip()}."
+    if lower.startswith("matched keyword pattern:"):
+        remainder = text.split(":", 1)[1].strip()
+        keyword, _, explanation = remainder.partition(".")
+        if explanation.strip():
+            return (
+                f"Matched invoice wording to a bookkeeping rule for {keyword.strip()}. "
+                f"{explanation.strip()}"
+            )
+        return f"Matched invoice wording to a bookkeeping rule for {keyword.strip()}."
+    return text
 
 
 def status_label(status: str | None) -> str:
@@ -426,18 +512,20 @@ def render_detail(result: dict[str, Any]) -> None:
 
     account = result.get("account_code_suggestion") or {}
     if account:
+        account_code = str(account.get("suggested_account_code") or "Not mapped")
+        account_name = str(account.get("suggested_account_name") or "Needs mapping")
         st.markdown(
             '<div class="account-strip">'
-            f'<strong>Account:</strong> {escape(str(account.get("suggested_account_code") or "UNMAPPED"))}'
-            f' | {escape(str(account.get("suggested_account_name") or "Needs mapping"))}'
-            f' | {escape(str(account.get("confidence") or "-"))}'
-            f'<br><span class="detail-meta">{escape(str(account.get("reason") or ""))}</span>'
+            f'<strong>Suggested Xero account:</strong> {escape(account_name)} '
+            f'<span class="detail-meta">({escape(account_code)})</span>'
+            f'<br><strong>Confidence:</strong> {escape(confidence_display(account.get("confidence")))}'
+            f'<br><span class="detail-meta">{escape(account_reason_text(account.get("reason")))}</span>'
             '</div>',
             unsafe_allow_html=True,
         )
 
     fields_tab, edits_tab, pdf_tab, payload_tab, explanation_tab = st.tabs(
-        ["Fields", "Review Edits", "Original PDF", "Xero Payload", "Explanation"]
+        ["Extracted Fields", "Review Edits", "Original PDF", "Draft Bill Output", "Explanation"]
     )
     with fields_tab:
         render_fields_table(result)
@@ -450,7 +538,7 @@ def render_detail(result: dict[str, Any]) -> None:
         if payload:
             payload_text = json.dumps(payload, indent=2)
             st.download_button(
-                "Download Xero Payload",
+                "Download Draft Bill JSON",
                 data=payload_text,
                 file_name=f"xero_payload_{invoice_number}.json",
                 mime="application/json",
@@ -458,7 +546,7 @@ def render_detail(result: dict[str, Any]) -> None:
             )
             st.code(payload_text, language="json")
         else:
-            st.info("No final Xero payload is available until this invoice is ready.")
+            st.info("The draft bill output will appear once this invoice is ready.")
     with explanation_tab:
         st.markdown(result.get("response") or "")
 
@@ -470,17 +558,16 @@ def render_validation_panel(result: dict[str, Any]) -> None:
         return
 
     for issue in issues:
-        checked = False
         if issue.get("field"):
-            checked = st.checkbox(
-                f"{issue.get('field')} needs attention",
+            st.checkbox(
+                f"{FIELD_LABELS.get(str(issue.get('field')), title_text(issue.get('field')))} needs attention",
                 value=False,
                 key=f"issue_check_{result['document_id']}_{issue.get('code')}_{issue.get('field')}",
             )
         st.markdown(
             '<div class="issue-row">'
-            f'<strong>{escape(str(issue.get("code") or "ISSUE"))}</strong>'
-            f' | {escape(str(issue.get("message") or ""))}'
+            f'<strong>{escape(issue_title(issue.get("code")))}</strong>'
+            f'<div>{escape(str(issue.get("message") or ""))}</div>'
             + (
                 f'<div class="issue-action">{escape(str(issue.get("suggested_action")))}</div>'
                 if issue.get("suggested_action")
@@ -501,8 +588,8 @@ def render_fields_table(result: dict[str, Any]) -> None:
             {
                 "Field": FIELD_LABELS[field],
                 "Value": field_display(field, extraction.get(field)),
-                "Source": sources.get(field, "-"),
-                "Review": "Yes" if field in fields_needing_review else "",
+                "How Found": source_display(sources.get(field)),
+                "Needs Review": "Yes" if field in fields_needing_review else "",
             }
         )
     st.dataframe(rows, hide_index=True, use_container_width=True)
@@ -521,7 +608,7 @@ def render_fields_table(result: dict[str, Any]) -> None:
                     "Amount": field_display("amount", item.get("amount")),
                     "GST": field_display("gst_amount", item.get("gst_amount")),
                     "Tax": item.get("tax_treatment") or "-",
-                    "Source": item.get("source") or "-",
+                    "How Found": source_display(item.get("source")),
                 }
             )
         st.markdown("#### Line Items")
@@ -541,12 +628,12 @@ def render_source_summary(extraction: dict[str, Any]) -> None:
     if not counts:
         return
     labels = {
-        "llm": "LLM extracted",
-        "regex_rescue": "Rule rescued",
-        "derived_arithmetic": "Derived",
-        "fallback_single_line": "Fallback line",
-        "user_correction": "User corrected",
-        "parser": "Parser",
+        "llm": "AI extracted",
+        "regex_rescue": "Checked by rules",
+        "derived_arithmetic": "Calculated",
+        "fallback_single_line": "Summary line created",
+        "user_correction": "Edited by user",
+        "parser": "Parsed",
     }
     summary = " | ".join(
         f"{labels.get(source, source)}: {count}"
@@ -562,10 +649,10 @@ def render_correction_audit(result: dict[str, Any]) -> None:
         return
     rows = [
         {
-            "Field": correction.get("field"),
+            "Field": FIELD_LABELS.get(str(correction.get("field")), title_text(correction.get("field"))),
             "Original": correction.get("original_value"),
             "Corrected": correction.get("corrected_value"),
-            "Source": correction.get("source"),
+            "Updated By": source_display(correction.get("source")),
         }
         for correction in corrections
     ]
@@ -769,7 +856,7 @@ with st.sidebar:
     st.text_input("Backend", value=api_health_status(), disabled=True)
     st.text_input(
         "Parser",
-        value=status_payload.get("parser_mode", "unknown"),
+        value=parser_mode_display(status_payload.get("parser_mode", "unknown")),
         disabled=True,
     )
     st.markdown("### How It Works")
