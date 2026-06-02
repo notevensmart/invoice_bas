@@ -1,16 +1,15 @@
 from __future__ import annotations
 
-import base64
 import json
 import os
-from html import escape
 from decimal import Decimal
+from html import escape
+from io import BytesIO
 from pathlib import Path
 from typing import Any
 
 import requests
 import streamlit as st
-import streamlit.components.v1 as components
 
 
 API_BASE_URL = os.getenv("INVOICE_API_URL", "http://localhost:8000").rstrip("/")
@@ -427,130 +426,6 @@ def update_result_in_state(updated: dict[str, Any]) -> None:
         st.session_state["last_batch"] = batch
 
 
-def render_queue(results: list[dict[str, Any]]) -> None:
-    groups = status_groups(results)
-    result_by_id = {result["document_id"]: result for result in results}
-    selected_by_status = st.session_state.setdefault("selected_document_ids_by_status", {})
-
-    tabs = st.tabs(
-        [
-            f"{STATUS_META[status]['label']} ({len(groups[status])})"
-            for status in STATUS_ORDER
-        ]
-    )
-    for tab, status in zip(tabs, STATUS_ORDER):
-        with tab:
-            status_results = groups[status]
-            if not status_results:
-                st.markdown('<div class="empty-state">None</div>', unsafe_allow_html=True)
-                continue
-
-            status_ids = {result["document_id"] for result in status_results}
-            selected_id = selected_by_status.get(status)
-            if selected_id not in status_ids:
-                selected_id = status_results[0]["document_id"]
-                selected_by_status[status] = selected_id
-
-            queue_col, detail_col = st.columns([0.34, 0.66], gap="large")
-            with queue_col:
-                st.markdown(f"#### {STATUS_META[status]['label']}")
-                for result in status_results:
-                    invoice_number, supplier, _ = invoice_identity(result)
-                    extraction = result.get("extraction") or {}
-                    issues = result.get("validation", {}).get("issues", [])
-                    is_selected = result["document_id"] == selected_by_status.get(status)
-                    if st.button(
-                        f"{invoice_number} | {supplier}",
-                        key=f"select_{status}_{result['document_id']}",
-                        use_container_width=True,
-                        type="primary" if is_selected else "secondary",
-                    ):
-                        selected_by_status[status] = result["document_id"]
-                        st.session_state["selected_document_id"] = result["document_id"]
-                        st.rerun()
-                    issue_text = f"{len(issues)} issue{'s' if len(issues) != 1 else ''}"
-                    st.markdown(
-                        '<div class="queue-caption">'
-                        f'{escape(money_display(extraction.get("total")))}'
-                        f' | {escape(issue_text)}'
-                        '</div>',
-                        unsafe_allow_html=True,
-                    )
-
-            with detail_col:
-                selected_result = result_by_id.get(selected_by_status.get(status))
-                if selected_result:
-                    st.session_state["selected_document_id"] = selected_result["document_id"]
-                    render_detail(selected_result)
-
-
-def render_detail(result: dict[str, Any]) -> None:
-    extraction = result.get("extraction") or {}
-    invoice_number, supplier, filename = invoice_identity(result)
-
-    st.markdown(
-        '<div class="detail-header">'
-        '<div class="detail-title-row">'
-        '<div>'
-        f'<p class="detail-title">{escape(invoice_number)} | {escape(supplier)}</p>'
-        f'<div class="detail-meta">{escape(filename)}</div>'
-        '</div>'
-        f'{status_badge_html(result.get("status"))}'
-        '</div>'
-        '</div>',
-        unsafe_allow_html=True,
-    )
-
-    metric_cols = st.columns(4)
-    metric_cols[0].metric("Total", money_display(extraction.get("total")))
-    metric_cols[1].metric("GST", money_display(extraction.get("gst")))
-    metric_cols[2].metric("Invoice Date", field_display("invoice_date", extraction.get("invoice_date")))
-    metric_cols[3].metric("Due Date", field_display("due_date", extraction.get("due_date")))
-
-    st.markdown("#### Validation")
-    render_validation_panel(result)
-
-    account = result.get("account_code_suggestion") or {}
-    if account:
-        account_code = str(account.get("suggested_account_code") or "Not mapped")
-        account_name = str(account.get("suggested_account_name") or "Needs mapping")
-        st.markdown(
-            '<div class="account-strip">'
-            f'<strong>Suggested Xero account:</strong> {escape(account_name)} '
-            f'<span class="detail-meta">({escape(account_code)})</span>'
-            f'<br><strong>Confidence:</strong> {escape(confidence_display(account.get("confidence")))}'
-            f'<br><span class="detail-meta">{escape(account_reason_text(account.get("reason")))}</span>'
-            '</div>',
-            unsafe_allow_html=True,
-        )
-
-    fields_tab, edits_tab, pdf_tab, payload_tab, explanation_tab = st.tabs(
-        ["Extracted Fields", "Review Edits", "Original PDF", "Draft Bill Output", "Explanation"]
-    )
-    with fields_tab:
-        render_fields_table(result)
-    with edits_tab:
-        render_correction_form(result)
-    with pdf_tab:
-        render_original_pdf(result)
-    with payload_tab:
-        payload = result.get("xero_payload")
-        if payload:
-            payload_text = json.dumps(payload, indent=2)
-            st.download_button(
-                "Download Draft Bill JSON",
-                data=payload_text,
-                file_name=f"xero_payload_{invoice_number}.json",
-                mime="application/json",
-                use_container_width=True,
-            )
-            st.code(payload_text, language="json")
-        else:
-            st.info("The draft bill output will appear once this invoice is ready.")
-    with explanation_tab:
-        st.markdown(result.get("response") or "")
-
-
 def render_validation_panel(result: dict[str, Any]) -> None:
     issues = result.get("validation", {}).get("issues", [])
     if not issues:
@@ -660,6 +535,45 @@ def render_correction_audit(result: dict[str, Any]) -> None:
     st.dataframe(rows, hide_index=True, use_container_width=True)
 
 
+@st.cache_data(show_spinner=False)
+def pdf_preview_images(content: bytes, max_pages: int = 2) -> tuple[list[bytes], str | None]:
+    try:
+        import fitz
+
+        images = []
+        with fitz.open(stream=content, filetype="pdf") as document:
+            page_count = min(max_pages, document.page_count)
+            for page_index in range(page_count):
+                page = document.load_page(page_index)
+                pixmap = page.get_pixmap(matrix=fitz.Matrix(1.7, 1.7), alpha=False)
+                images.append(pixmap.tobytes("png"))
+        if images:
+            return images, None
+    except Exception:
+        pass
+
+    try:
+        from pdf2image import convert_from_bytes
+
+        pages = convert_from_bytes(
+            content,
+            dpi=150,
+            first_page=1,
+            last_page=max_pages,
+        )
+        images = []
+        for page in pages:
+            output = BytesIO()
+            page.save(output, format="PNG")
+            images.append(output.getvalue())
+        if images:
+            return images, None
+    except Exception as exc:
+        return [], f"PDF image preview could not be rendered: {exc}"
+
+    return [], "PDF image preview could not be rendered."
+
+
 def render_original_pdf(result: dict[str, Any]) -> None:
     preview = st.session_state.get("pdf_previews", {}).get(result["document_id"])
     if not preview:
@@ -675,19 +589,185 @@ def render_original_pdf(result: dict[str, Any]) -> None:
         mime="application/pdf",
         use_container_width=True,
     )
-    encoded = base64.b64encode(content).decode("ascii")
-    components.html(
-        f"""
-        <iframe
-            src="data:application/pdf;base64,{encoded}"
-            width="100%"
-            height="720"
-            style="border: 1px solid #e4e7ec; border-radius: 8px;"
-        ></iframe>
-        """,
-        height=740,
-        scrolling=False,
+    images, warning = pdf_preview_images(content)
+    if not images:
+        st.info("The original PDF can still be downloaded, but the page preview is unavailable.")
+        if warning:
+            st.caption(warning)
+        return
+
+    if len(images) == 1:
+        st.caption("Static preview of the uploaded invoice.")
+    else:
+        st.caption(f"Static preview of the first {len(images)} pages.")
+    for index, image in enumerate(images, start=1):
+        st.image(
+            image,
+            caption=f"{filename} - page {index}",
+            use_container_width=True,
+        )
+
+
+def render_account_suggestion(result: dict[str, Any]) -> None:
+    account = result.get("account_code_suggestion") or {}
+    if not account:
+        st.caption("No account suggestion is available yet.")
+        return
+    account_code = str(account.get("suggested_account_code") or "Not mapped")
+    account_name = str(account.get("suggested_account_name") or "Needs mapping")
+    st.markdown(
+        '<div class="account-strip">'
+        f'<strong>Suggested Xero account:</strong> {escape(account_name)} '
+        f'<span class="detail-meta">({escape(account_code)})</span>'
+        f'<br><strong>Confidence:</strong> {escape(confidence_display(account.get("confidence")))}'
+        f'<br><span class="detail-meta">{escape(account_reason_text(account.get("reason")))}</span>'
+        '</div>',
+        unsafe_allow_html=True,
     )
+
+
+def selected_invoice(batch: dict[str, Any]) -> dict[str, Any] | None:
+    results = batch.get("results", [])
+    selected_id = st.session_state.get("selected_document_id")
+    for result in results:
+        if result["document_id"] == selected_id:
+            return result
+    for status in ("needs_review", "failed", "ready"):
+        for result in results:
+            if result.get("status") == status:
+                st.session_state["selected_document_id"] = result["document_id"]
+                return result
+    return None
+
+
+def render_invoice_queue(batch: dict[str, Any]) -> None:
+    groups = status_groups(batch.get("results", []))
+    for status in ("needs_review", "failed", "ready"):
+        st.markdown(f"#### {STATUS_META[status]['label']} ({len(groups[status])})")
+        if not groups[status]:
+            st.caption("None")
+            continue
+        for result in groups[status]:
+            invoice_number, supplier, _ = invoice_identity(result)
+            extraction = result.get("extraction") or {}
+            issues = result.get("validation", {}).get("issues", [])
+            is_selected = result["document_id"] == st.session_state.get("selected_document_id")
+            if st.button(
+                f"{invoice_number} | {supplier}",
+                key=f"review_select_{result['document_id']}",
+                use_container_width=True,
+                type="primary" if is_selected else "secondary",
+            ):
+                st.session_state["selected_document_id"] = result["document_id"]
+                st.rerun()
+            issue_text = f"{len(issues)} issue{'s' if len(issues) != 1 else ''}"
+            st.markdown(
+                '<div class="queue-caption">'
+                f'{escape(money_display(extraction.get("total")))}'
+                f' | {escape(status_label(result.get("status")))}'
+                f' | {escape(issue_text)}'
+                '</div>',
+                unsafe_allow_html=True,
+            )
+
+
+def render_review_workspace(result: dict[str, Any]) -> None:
+    extraction = result.get("extraction") or {}
+    invoice_number, supplier, filename = invoice_identity(result)
+    st.markdown(
+        '<div class="detail-header">'
+        '<div class="detail-title-row">'
+        '<div>'
+        f'<p class="detail-title">{escape(invoice_number)} | {escape(supplier)}</p>'
+        f'<div class="detail-meta">{escape(filename)}</div>'
+        '</div>'
+        f'{status_badge_html(result.get("status"))}'
+        '</div>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+
+    metric_cols = st.columns(4)
+    metric_cols[0].metric("Total", money_display(extraction.get("total")))
+    metric_cols[1].metric("GST", money_display(extraction.get("gst")))
+    metric_cols[2].metric("Invoice Date", field_display("invoice_date", extraction.get("invoice_date")))
+    metric_cols[3].metric("Due Date", field_display("due_date", extraction.get("due_date")))
+
+    evidence_col, edit_col = st.columns([0.53, 0.47], gap="large")
+    with evidence_col:
+        st.markdown("### Original Invoice")
+        render_original_pdf(result)
+    with edit_col:
+        st.markdown("### Review Fields")
+        render_correction_form(result)
+
+    with st.expander("Validation Issues", expanded=bool(result.get("validation", {}).get("issues", []))):
+        render_validation_panel(result)
+    with st.expander("Extracted Fields And Line Items"):
+        render_fields_table(result)
+    with st.expander("Account Suggestion", expanded=True):
+        render_account_suggestion(result)
+    with st.expander("Explanation"):
+        st.markdown(result.get("response") or "")
+
+
+def render_review_page(batch: dict[str, Any]) -> None:
+    render_action_status(batch)
+    render_batch_metrics(batch)
+    queue_col, workspace_col = st.columns([0.28, 0.72], gap="large")
+    with queue_col:
+        st.markdown("### Work Queue")
+        render_invoice_queue(batch)
+    with workspace_col:
+        result = selected_invoice(batch)
+        if result:
+            render_review_workspace(result)
+        else:
+            st.markdown('<div class="empty-state">No invoice selected.</div>', unsafe_allow_html=True)
+
+
+def ready_results(batch: dict[str, Any]) -> list[dict[str, Any]]:
+    return [
+        result
+        for result in batch.get("results", [])
+        if result.get("status") == "ready" and result.get("xero_payload")
+    ]
+
+
+def render_export_page(batch: dict[str, Any]) -> None:
+    ready = ready_results(batch)
+    render_batch_metrics(batch)
+    if not ready:
+        st.markdown(
+            '<div class="empty-state">No invoices are ready for draft bill export yet.</div>',
+            unsafe_allow_html=True,
+        )
+        return
+
+    payloads = [result["xero_payload"] for result in ready]
+    st.success(f"{len(ready)} invoice{'s' if len(ready) != 1 else ''} ready for draft bill export.")
+    st.download_button(
+        "Download All Draft Bill JSON",
+        data=json.dumps(payloads, indent=2),
+        file_name="xero_draft_bill_payloads.json",
+        mime="application/json",
+        use_container_width=True,
+    )
+
+    for result in ready:
+        invoice_number, supplier, _ = invoice_identity(result)
+        extraction = result.get("extraction") or {}
+        with st.expander(f"{invoice_number} | {supplier} | {money_display(extraction.get('total'))}"):
+            payload_text = json.dumps(result["xero_payload"], indent=2)
+            st.download_button(
+                "Download This Draft Bill",
+                data=payload_text,
+                file_name=f"xero_payload_{invoice_number}.json",
+                mime="application/json",
+                key=f"download_ready_{result['document_id']}",
+                use_container_width=True,
+            )
+            st.code(payload_text, language="json")
 
 
 def render_batch_metrics(batch: dict[str, Any]) -> None:
@@ -783,7 +863,7 @@ def render_correction_form(result: dict[str, Any]) -> None:
         for index, field in enumerate(editable_fields):
             with cols[index % 3]:
                 edited_values[field] = st.text_input(
-                    field,
+                    FIELD_LABELS.get(field, title_text(field)),
                     value=original_values[field],
                     key=f"edit_{result['document_id']}_{field}",
                 )
@@ -794,7 +874,7 @@ def render_correction_form(result: dict[str, Any]) -> None:
             for index, item in enumerate(line_items):
                 key = f"line_items.{index}.description"
                 edited_values[key] = st.text_input(
-                    f"line {index + 1} description",
+                    f"Line {index + 1} description",
                     value=item.get("description") or "",
                     key=f"edit_{result['document_id']}_{key}",
                 )
@@ -802,7 +882,7 @@ def render_correction_form(result: dict[str, Any]) -> None:
 
         account = result.get("account_code_suggestion") or {}
         edited_values["account_code_suggestion.suggested_account_code"] = st.text_input(
-            "account code",
+            "Xero account code",
             value=account.get("suggested_account_code") or "",
             key=f"edit_{result['document_id']}_account_code",
         )
@@ -900,7 +980,7 @@ with st.sidebar:
         except Exception as exc:
             st.error(f"Reset failed: {exc}")
 
-upload_tab, review_tab = st.tabs(["Upload", "Review Queue"])
+upload_tab, review_tab, export_tab = st.tabs(["Upload", "Review", "Export"])
 
 with upload_tab:
     upload_col, summary_col = st.columns([0.42, 0.58], gap="large")
@@ -939,7 +1019,7 @@ with upload_tab:
                         }
                         store_pdf_previews([invoice], specs)
                         prime_queue_selection(st.session_state["last_batch"])
-                    st.success("Processing complete.")
+                    st.success("Processing complete. Open the Review tab to inspect the work queue.")
                 except Exception as exc:
                     st.error(f"Processing failed: {exc}")
 
@@ -957,6 +1037,11 @@ with review_tab:
     if not batch:
         st.info("No invoices processed yet.")
     else:
-        render_action_status(batch)
-        render_batch_metrics(batch)
-        render_queue(batch.get("results", []))
+        render_review_page(batch)
+
+with export_tab:
+    batch = st.session_state.get("last_batch")
+    if not batch:
+        st.info("No invoices processed yet.")
+    else:
+        render_export_page(batch)

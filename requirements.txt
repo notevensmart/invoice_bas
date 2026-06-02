@@ -6,6 +6,7 @@ streamlit
 pydantic>=2
 python-dotenv
 PyPDF2
+PyMuPDF
 pdf2image
 pytesseract
 langchain-groq
